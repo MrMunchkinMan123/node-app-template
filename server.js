@@ -192,8 +192,8 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 // Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
-});
+});server.js
 
-//state
+// state
 
-// state for me 
+// state for me
