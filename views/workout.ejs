@@ -1,8 +1,3 @@
-{% extends "base.html" %}
-
-{% block title %}Workout Tracker - FitTracker{% endblock %}
-
-{% block content %}
 <div class="page-header">
     <h1>Workout Tracker</h1>
     <p>Log your exercises and track your progress.</p>
@@ -43,9 +38,7 @@
             <button type="submit" class="btn">Add Exercise</button>
         </form>
 
-        <div id="current-workout" style="margin-top: 1.5rem;">
-            <!-- Current workout exercises will appear here -->
-        </div>
+        <div id="current-workout" style="margin-top: 1.5rem;"></div>
 
         <button class="btn btn-secondary" onclick="saveWorkout()" style="margin-top: 1rem; width: 100%;">
             Save Workout
@@ -59,9 +52,8 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<script>
 setActiveNav('workout');
 let currentExercises = [];
 
@@ -93,7 +85,7 @@ function displayCurrentWorkout() {
                 <strong>${ex.name}</strong><br>
                 <small>${ex.sets} sets × ${ex.reps} reps ${ex.weight > 0 ? `@ ${ex.weight} lbs` : ''}</small>
             </div>
-            <button onclick="removeExercise($,{index})" class="btn" style="padding: 0.5rem;">Remove</button>
+            <button onclick="removeExercise(${index})" class="btn" style="padding: 0.5rem;">Remove</button>
         </div>
     `).join('');
     
@@ -112,14 +104,14 @@ async function saveWorkout() {
     }
     
     const workoutName = document.getElementById('workout-name').value;
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('jwtToken');
     
     try {
         const response = await fetch('/api/workouts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': token
             },
             body: JSON.stringify({
                 name: workoutName,
@@ -140,11 +132,11 @@ async function saveWorkout() {
 }
 
 async function loadWorkoutHistory() {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('jwtToken');
     
     try {
         const response = await fetch('/api/workouts', {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': token }
         });
         
         if (response.ok) {
@@ -170,4 +162,4 @@ async function loadWorkoutHistory() {
 }
 
 loadWorkoutHistory();
-{% endblock %}
+</script>
