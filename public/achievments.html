@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Achievements - FitTracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Achievements</h1>
+    <p>Track your milestones and earn rewards for your dedication.</p>
+</div>
+
+<div class="points-banner">
+    <h2>Your Points: <span id="total-points">0</span></h2>
+    <div class="points-value">🏆</div>
+    <p>Next reward at 100 points</p>
+</div>
+
+<div class="achievements-grid">
+    <div class="achievement-card locked">
+        <div class="achievement-icon">🏃</div>
+        <div class="achievement-title">First Workout</div>
+        <div class="achievement-desc">Complete your first workout session</div>
+        <div class="achievement-reward">Reward: 10 points</div>
+    </div>
+
+    <div class="achievement-card locked">
+        <div class="achievement-icon">📅</div>
+        <div class="achievement-title">Week Warrior</div>
+        <div class="achievement-desc">Complete 7 workouts in a week</div>
+        <div class="achievement-reward">Reward: 50 points</div>
+    </div>
+
+    <div class="achievement-card locked">
+        <div class="achievement-icon">💪</div>
+        <div class="achievement-title">Strength Seeker</div>
+        <div class="achievement-desc">Increase weight on any exercise</div>
+        <div class="achievement-reward">Reward: 25 points</div>
+    </div>
+
+    <div class="achievement-card locked">
+        <div class="achievement-icon">📊</div>
+        <div class="achievement-title">Data Tracker</div>
+        <div class="achievement-desc">Log 30 different exercises</div>
+        <div class="achievement-reward">Reward: 75 points</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+setActiveNav('achievements');
+
+async function loadAchievements() {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch('/api/achievements', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('total-points').textContent = data.totalPoints || 0;
+        }
+    } catch (error) {
+        console.error('Error loading achievements:', error);
+    }
+}
+
+loadAchievements();
+{% endblock %}

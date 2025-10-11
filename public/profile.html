@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - FitTracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Profile Settings</h1>
+    <p>Customize your account and notification preferences.</p>
+</div>
+
+<div class="card">
+    <h3>Personal Information</h3>
+    <form id="profile-form" onsubmit="handleProfileUpdate(event)">
+        <div class="form-group">
+            <label for="profile-username">Username</label>
+            <input type="text" id="profile-username" required>
+        </div>
+        <div class="form-group">
+            <label for="profile-email">Email</label>
+            <input type="email" id="profile-email" required>
+        </div>
+        <div class="form-group">
+            <label for="profile-age">Age</label>
+            <input type="number" id="profile-age" min="1">
+        </div>
+        <div class="form-group">
+            <label for="profile-weight">Weight (lbs)</label>
+            <input type="number" id="profile-weight" min="1">
+        </div>
+        <button type="submit" class="btn">Update Profile</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Notification Preferences</h3>
+    <form id="notifications-form" onsubmit="handleNotificationsUpdate(event)">
+        <div class="checkbox-group">
+            <input type="checkbox" id="notify-workout" checked>
+            <label for="notify-workout">Workout reminders</label>
+        </div>
+        <div class="checkbox-group">
+            <input type="checkbox" id="notify-achievements" checked>
+            <label for="notify-achievements">Achievement notifications</label>
+        </div>
+        <div class="checkbox-group">
+            <input type="checkbox" id="notify-community" checked>
+            <label for="notify-community">Community updates</label>
+        </div>
+        <button type="submit" class="btn">Save Preferences</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Change Password</h3>
+    <form id="password-form" onsubmit="handlePasswordChange(event)">
+        <div class="form-group">
+            <label for="current-password">Current Password</label>
+            <input type="password" id="current-password" required>
+        </div>
+        <div class="form-group">
+            <label for="new-password">New Password</label>
+            <input type="password" id="new-password" required minlength="6">
+        </div>
+        <div class="form-group">
+            <label for="confirm-password">Confirm New Password</label>
+            <input type="password" id="confirm-password" required>
+        </div>
+        <button type="submit" class="btn">Change Password</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+setActiveNav('profile');
+
+async function loadProfile() {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    
+    if (username) {
+        document.getElementById('profile-username').value = username;
+    }
+    
+    try {
+        const response = await fetch('/api/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('profile-email').value = data.email || '';
+            document.getElementById('profile-age').value = data.age || '';
+            document.getElementById('profile-weight').value = data.weight || '';
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
+
+async function handleProfileUpdate(event) {
+    event.preventDefault();
+    const token = localStorage.getItem('token');
+    
+    const profileData = {
+        username: document.getElementById('profile-username').value,
+        email: document.getElementById('profile-email').value,
+        age: document.getElementById('profile-age').value,
+        weight: document.getElementById('profile-weight').value
+    };
+    
+    try {
+        const response = await fetch('/api/profile', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(profileData)
+        });
+        
+        if (response.ok) {
+            alert('Profile updated successfully!');
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+    }
+}
+
+async function handleNotificationsUpdate(event) {
+    event.preventDefault();
+    alert('Notification preferences saved!');
+}
+
+async function handlePasswordChange(event) {
+    event.preventDefault();
+    
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    
+    if (newPassword !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+    }
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch('/api/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                currentPassword: document.getElementById('current-password').value,
+                newPassword: newPassword
+            })
+        });
+        
+        if (response.ok) {
+            alert('Password changed successfully!');
+            event.target.reset();
+        }
+    } catch (error) {
+        console.error('Error changing password:', error);
+    }
+}
+
+loadProfile();
+{% endblock %}

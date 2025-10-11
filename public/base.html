@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTracker - Your Fitness Journey</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    💪 FitTracker
+                </div>
+                <nav>
+                    <ul class="nav-menu">
+                        <li><a href="dashboard.html" id="nav-dashboard">📊 Dashboard</a></li>
+                        <li><a href="workout.html" id="nav-workout">🏋️ Workout</a></li>
+                        <li><a href="progress.html" id="nav-progress">📈 Progress</a></li>
+                        <li><a href="community.html" id="nav-community">👥 Community</a></li>
+                        <li><a href="achievements.html" id="nav-achievements">🏆 Achievements</a></li>
+                        <li><a href="profile.html" id="nav-profile">⚙️ Profile</a></li>
+                    </ul>
+                </nav>
+                <div class="user-info">
+                    <span id="username-display">Loading...</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <!-- Page content will be inserted here -->
+            <div id="page-content">
+                <!-- CONTENT_PLACEHOLDER -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'logon.html';
+                return false;
+            }
+            return true;
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.href = 'logon.html';
+        }
+
+        // Load user info
+        function loadUserInfo() {
+            const username = localStorage.getItem('username');
+            if (username) {
+                document.getElementById('username-display').textContent = username;
+            }
+        }
+
+        // Set active nav item
+        function setActiveNav(pageId) {
+            const navItem = document.getElementById('nav-' + pageId);
+            if (navItem) {
+                navItem.classList.add('active');
+            }
+        }
+
+        // Initialize on page load
+        if (checkAuth()) {
+            loadUserInfo();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Workout Tracker - FitTracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Workout Tracker</h1>
+    <p>Log your exercises and track your progress.</p>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3>Create New Workout</h3>
+        <form id="workout-form" onsubmit="handleWorkoutSubmit(event)">
+            <div class="form-group">
+                <label for="workout-name">Workout Name</label>
+                <input type="text" id="workout-name" required>
+            </div>
+            <div class="form-group">
+                <label for="exercise-name">Exercise</label>
+                <select id="exercise-name" required>
+                    <option value="">Select Exercise</option>
+                    <option value="push-ups">Push-ups</option>
+                    <option value="squats">Squats</option>
+                    <option value="bench-press">Bench Press</option>
+                    <option value="deadlift">Deadlift</option>
+                    <option value="running">Running</option>
+                    <option value="cycling">Cycling</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sets">Sets</label>
+                <input type="number" id="sets" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="reps">Reps/Duration</label>
+                <input type="number" id="reps" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="weight">Weight (lbs) - Optional</label>
+                <input type="number" id="weight" min="0">
+            </div>
+            <button type="submit" class="btn">Add Exercise</button>
+        </form>
+
+        <div id="current-workout" style="margin-top: 1.5rem;">
+            <!-- Current workout exercises will appear here -->
+        </div>
+
+        <button class="btn btn-secondary" onclick="saveWorkout()" style="margin-top: 1rem; width: 100%;">
+            Save Workout
+        </button>
+    </div>
+
+    <div class="card">
+        <h3>Workout History</h3>
+        <div id="workout-history">
+            <p>Loading workout history...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+setActiveNav('workout');
+let currentExercises = [];
+
+function handleWorkoutSubmit(event) {
+    event.preventDefault();
+    
+    const exercise = {
+        name: document.getElementById('exercise-name').value,
+        sets: document.getElementById('sets').value,
+        reps: document.getElementById('reps').value,
+        weight: document.getElementById('weight').value || 0
+    };
+    
+    currentExercises.push(exercise);
+    displayCurrentWorkout();
+    event.target.reset();
+}
+
+function displayCurrentWorkout() {
+    const container = document.getElementById('current-workout');
+    if (currentExercises.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    const html = currentExercises.map((ex, index) => `
+        <div class="exercise-item">
+            <div>
+                <strong>${ex.name}</strong><br>
+                <small>${ex.sets} sets × ${ex.reps} reps ${ex.weight > 0 ? `@ ${ex.weight} lbs` : ''}</small>
+            </div>
+            <button onclick="removeExercise($,{index})" class="btn" style="padding: 0.5rem;">Remove</button>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+function removeExercise(index) {
+    currentExercises.splice(index, 1);
+    displayCurrentWorkout();
+}
+
+async function saveWorkout() {
+    if (currentExercises.length === 0) {
+        alert('Please add at least one exercise');
+        return;
+    }
+    
+    const workoutName = document.getElementById('workout-name').value;
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch('/api/workouts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: workoutName,
+                exercises: currentExercises
+            })
+        });
+        
+        if (response.ok) {
+            alert('Workout saved successfully!');
+            currentExercises = [];
+            displayCurrentWorkout();
+            document.getElementById('workout-form').reset();
+            loadWorkoutHistory();
+        }
+    } catch (error) {
+        console.error('Error saving workout:', error);
+    }
+}
+
+async function loadWorkoutHistory() {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch('/api/workouts', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const workouts = await response.json();
+            
+            if (workouts.length === 0) {
+                document.getElementById('workout-history').innerHTML = '<p>No workouts yet. Start logging!</p>';
+                return;
+            }
+            
+            const html = workouts.map(workout => `
+                <div class="card" style="margin-bottom: 1rem;">
+                    <strong>${workout.name}</strong> - ${workout.date}<br>
+                    <small>${workout.exercises.length} exercises</small>
+                </div>
+            `).join('');
+            
+            document.getElementById('workout-history').innerHTML = html;
+        }
+    } catch (error) {
+        console.error('Error loading workouts:', error);
+    }
+}
+
+loadWorkoutHistory();
+{% endblock %}
