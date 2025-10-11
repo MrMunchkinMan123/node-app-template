@@ -1,0 +1,19 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "107.180.1.16",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "cis440fall2025team5",
+            "database": "cis440fall2025team5",
+            "username": "cis440fall2025team5",
+            "askForPassword": true
+        }
+    ]
+}
