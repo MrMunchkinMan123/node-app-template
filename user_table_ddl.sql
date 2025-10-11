@@ -1,3 +1,4 @@
+
 select DATABASE();
 use cis440fall2025team5;
 select * from users where username='alice';
@@ -73,3 +74,4 @@ INSERT INTO workouts (user_id, exercise_id, sets, reps, weight, duration_minutes
 (2, 2, 3, 12, 50.00, NULL, NULL),
 -- Carol runs 5km in 30 minutes
 (3, 3, NULL, NULL, NULL, 30.00, 5.00);
+
