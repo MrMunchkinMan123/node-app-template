@@ -3,8 +3,17 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const expressLayouts = require('express-ejs-layouts');
 
 const app = express();
+// Set up EJS as the view engine
+app.set('view engine', 'ejs');
+app.set('views', __dirname + '/views');
+
+// Use express-ejs-layouts for template inheritance
+app.use(expressLayouts);
+app.set('layout', 'base'); // Default layout file is base.ejs
+
 const port = 3000;
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -21,9 +30,34 @@ app.get('/', (req, res) => {
 });
 
 // Route to serve dashboard.html
+// app.get('/dashboard', (req, res) => {
+//     res.sendFile(__dirname + '/public/dashboard.html');
+// });
+
 app.get('/dashboard', (req, res) => {
-    res.sendFile(__dirname + '/public/dashboard.html');
+    res.render('dashboard', { title: 'Dashboard - FitTracker' });
 });
+
+app.get('/workout', (req, res) => {
+    res.render('workout', { title: 'Workout Tracker - FitTracker' });
+});
+
+app.get('/progress', (req, res) => {
+    res.render('progress', { title: 'Progress - FitTracker' });
+});
+
+app.get('/community', (req, res) => {
+    res.render('community', { title: 'Community - FitTracker' });
+});
+
+app.get('/achievements', (req, res) => {
+    res.render('achievements', { title: 'Achievements - FitTracker' });
+});
+
+app.get('/profile', (req, res) => {
+    res.render('profile', { title: 'Profile - FitTracker' });
+});
+
 //////////////////////////////////////
 //END ROUTES TO SERVE HTML FILES
 //////////////////////////////////////
@@ -182,7 +216,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 // Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
-});server.js
+});
 
 // state
 

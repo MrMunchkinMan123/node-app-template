@@ -1,49 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logon</title>
-    <link rel="stylesheet" href="css/logon.css">
+    <title>FitTracker - Login</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-
 <body>
-    <div class="container">
-        <h1>Welcome to Node App</h1>
-        <div class="tab">
-            <button class="tab-button active" id="login-tab">Logon</button>
-            <button class="tab-button" id="create-account-tab">Create Account</button>
-        </div>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>💪 FitTracker</h1>
+                <p>Track your fitness journey</p>
+            </div>
 
-        <div id="form-container">
-            <!-- Logon Form -->
-            <form id="logon-form" class="active-form">
-                <label for="login-email">Email:</label>
-                <input type="email" id="login-email" placeholder="Enter your email" required>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="login-tab">Login</button>
+                <button class="auth-tab" id="create-account-tab">Register</button>
+            </div>
 
-                <label for="login-password">Password:</label>
-                <input type="password" id="login-password" placeholder="Enter your password" required>
+            <div id="message" class="alert"></div>
 
-                <button type="submit" class="button">Logon</button>
+            <!-- Login Form -->
+            <form id="logon-form" class="auth-form active-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
             </form>
 
             <!-- Create Account Form -->
-            <form id="create-account-form">
-                <label for="create-email">Email:</label>
-                <input type="email" id="create-email" placeholder="Enter your email" required>
-
-                <label for="create-password">Password:</label>
-                <input type="password" id="create-password" placeholder="Create your password" required>
-
-                <button type="submit" class="button">Create Account</button>
+            <form id="create-account-form" class="auth-form">
+                <div class="form-group">
+                    <label for="create-email">Email</label>
+                    <input type="email" id="create-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="create-password">Password</label>
+                    <input type="password" id="create-password" required minlength="6">
+                </div>
+                <button type="submit" class="btn">Register</button>
             </form>
-
-            <p id="message" class="message"></p>
         </div>
     </div>
-
     <script src="js/logon.js"></script>
+    <script src="js/datamodel.js"></script>
 </body>
 
 </html>

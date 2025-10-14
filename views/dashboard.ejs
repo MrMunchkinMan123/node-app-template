@@ -1,0 +1,67 @@
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p>Welcome back! Here's your fitness overview.</p>
+</div>
+
+<div id="profile-info" class="card">
+    <p>Loading profile information...</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value" id="total-workouts">0</div>
+        <div class="stat-label">Total Workouts</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="streak-days">0</div>
+        <div class="stat-label">Day Streak</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="total-exercises">0</div>
+        <div class="stat-label">Exercises Completed</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Recent Activity</h3>
+    <div id="recent-activity">
+        <p>No recent workouts found. Start your fitness journey today!</p>
+    </div>
+</div>
+
+<script>
+setActiveNav('dashboard');
+
+async function loadDashboard() {
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch('/api/dashboard', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            document.getElementById('total-workouts').textContent = data.totalWorkouts || 0;
+            document.getElementById('streak-days').textContent = data.streakDays || 0;
+            document.getElementById('total-exercises').textContent = data.totalExercises || 0;
+            
+            if (data.recentActivity && data.recentActivity.length > 0) {
+                const activityHTML = data.recentActivity.map(activity => `
+                    <div class="activity-item">
+                        <strong>${activity.name}</strong> - ${activity.date}
+                        <br>
+                        <small>${activity.exercises} exercises, ${activity.duration} minutes</small>
+                    </div>
+                `).join('');
+                document.getElementById('recent-activity').innerHTML = activityHTML;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+    }
+}
+
+loadDashboard();
+</script>
