@@ -6,102 +6,91 @@ use cis440fall2025team5;
 -- ========================================
 DROP TABLE IF EXISTS workouts;
 DROP TABLE IF EXISTS exercises;
-DROP TABLE IF EXISTS user;
+DROP TABLE IF EXISTS `user`;
 
 
+-- ========================================
+-- 2) Create `user` table (matches server queries)
+--    Contains login metadata: last_login, login_count, last_ip, refresh_token_hash
+-- ========================================
+CREATE TABLE IF NOT EXISTS `user` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(50) DEFAULT NULL,
+    password VARCHAR(255) NOT NULL,
+    display_name VARCHAR(100) DEFAULT NULL,
+    bio TEXT DEFAULT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    role VARCHAR(50) DEFAULT 'user',
+    last_login DATETIME NULL,
+    login_count INT NOT NULL DEFAULT 0,
+    last_ip VARCHAR(45) NULL,
+    refresh_token_hash VARCHAR(255) NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX (email),
+    INDEX (username)
+);
 
 
+-- ========================================
+-- 3) Create Exercises table
+-- ========================================
+CREATE TABLE IF NOT EXISTS exercises (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    category ENUM('strength','cardio') NOT NULL,
+    default_unit VARCHAR(20) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 
-    -- 1) Drop tables if they exist (safe order due to foreign keys)
-    -- ========================================
-    DROP TABLE IF EXISTS workouts;
-    DROP TABLE IF EXISTS exercises;
-    DROP TABLE IF EXISTS `user`;
+-- ========================================
+-- 4) Create Workouts table
+-- ========================================
+CREATE TABLE IF NOT EXISTS workouts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    exercise_id INT NOT NULL,
+    sets INT DEFAULT NULL,
+    reps INT DEFAULT NULL,
+    weight DECIMAL(8,2) DEFAULT NULL,
+    duration_minutes DECIMAL(6,2) DEFAULT NULL,
+    distance_km DECIMAL(6,2) DEFAULT NULL,
+    logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
+    FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+);
 
 
-    -- ========================================
-    -- 2) Create `user` table (matches server queries)
-    --    Contains login metadata: last_login, login_count, last_ip, refresh_token_hash
-    -- ========================================
-    CREATE TABLE IF NOT EXISTS `user` (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        username VARCHAR(50) DEFAULT NULL,
-        password VARCHAR(255) NOT NULL,
-        display_name VARCHAR(100) DEFAULT NULL,
-        bio TEXT DEFAULT NULL,
-        is_active TINYINT(1) NOT NULL DEFAULT 1,
-        role VARCHAR(50) DEFAULT 'user',
-        last_login DATETIME NULL,
-        login_count INT NOT NULL DEFAULT 0,
-        last_ip VARCHAR(45) NULL,
-        refresh_token_hash VARCHAR(255) NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX (email),
-        INDEX (username)
-    );
+-- ========================================
+-- 5) Insert sample users (passwords are placeholders - hash real passwords in your app)
+-- ========================================
+INSERT INTO `user` (email, username, password, display_name) VALUES
+    ('alice@example.com','alice','hash1','Alice'),
+    ('bob@example.com','bob','hash2','Bob'),
+    ('carol@example.com','carol','hash3','Carol');
 
 
-    -- ========================================
-    -- 3) Create Exercises table
-    -- ========================================
-    CREATE TABLE IF NOT EXISTS exercises (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        category ENUM('strength','cardio') NOT NULL,
-        default_unit VARCHAR(20) DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+-- ========================================
+-- 6) Insert sample exercises
+-- ========================================
+INSERT INTO exercises (name, category, default_unit) VALUES
+    ('Push-up','strength','reps'),
+    ('Squat','strength','reps'),
+    ('Running','cardio','km');
 
 
-    -- ========================================
-    -- 4) Create Workouts table
-    -- ========================================
-    CREATE TABLE IF NOT EXISTS workouts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        exercise_id INT NOT NULL,
-        sets INT DEFAULT NULL,
-        reps INT DEFAULT NULL,
-        weight DECIMAL(8,2) DEFAULT NULL,
-        duration_minutes DECIMAL(6,2) DEFAULT NULL,
-        distance_km DECIMAL(6,2) DEFAULT NULL,
-        logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
-        FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
-    );
+-- ========================================
+-- 7) Insert sample workouts
+-- ========================================
+INSERT INTO workouts (user_id, exercise_id, sets, reps, weight, duration_minutes, distance_km) VALUES
+    (1,1,3,15,NULL,NULL,NULL),
+    (2,2,3,12,50.00,NULL,NULL),
+    (3,3,NULL,NULL,NULL,30.00,5.00);
 
-
-    -- ========================================
-    -- 5) Insert sample users (passwords are placeholders - hash real passwords in your app)
-    -- ========================================
-    INSERT INTO `user` (email, username, password, display_name) VALUES
-        ('alice@example.com','alice','hash1','Alice'),
-        ('bob@example.com','bob','hash2','Bob'),
-        ('carol@example.com','carol','hash3','Carol');
-
-
-    -- ========================================
-    -- 6) Insert sample exercises
-    -- ========================================
-    INSERT INTO exercises (name, category, default_unit) VALUES
-        ('Push-up','strength','reps'),
-        ('Squat','strength','reps'),
-        ('Running','cardio','km');
-
-
-    -- ========================================
-    -- 7) Insert sample workouts
-    -- ========================================
-    INSERT INTO workouts (user_id, exercise_id, sets, reps, weight, duration_minutes, distance_km) VALUES
-        (1,1,3,15,NULL,NULL,NULL),
-        (2,2,3,12,50.00,NULL,NULL),
-        (3,3,NULL,NULL,NULL,30.00,5.00);
-
-    -- Helpful SELECT to inspect table contents
-    SELECT id, email, username, display_name, last_login, login_count FROM `user` LIMIT 10;
+-- Helpful SELECT to inspect table contents
+SELECT id, email, username, display_name, last_login, login_count FROM `user` LIMIT 10;
 
 
 
