@@ -1,5 +1,5 @@
 {
-  "name": "node-app-template",
+  "name": "app-template",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
@@ -9,17 +9,26 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "This is a simple template to get you started creating a web app with a restful api backend that connects to a mySQL database.",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
     "express": "^4.21.2",
     "express-ejs-layouts": "^2.5.1",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.12.0"
+    "mysql2": "^3.15.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MrMunchkinMan123/node-app-template.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MrMunchkinMan123/node-app-template/issues"
+  },
+  "homepage": "https://github.com/MrMunchkinMan123/node-app-template#readme"
 }
