@@ -134,7 +134,7 @@ async function authenticateToken(req, res, next) {
 // Route: Create Account
 app.post('/api/create-account', async (req, res) => {
     const { email, password } = req.body;
-
+     
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required.' });
     }
@@ -169,15 +169,13 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).json({ message: 'Email and password are required.' });
     }
 
+    const connection = await createConnection();
     try {
-        const connection = await createConnection();
-
+        // Check if user exists
         const [rows] = await connection.execute(
             'SELECT * FROM user WHERE email = ?',
             [email]
         );
-
-        await connection.end();  // Close connection
 
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Invalid email or password.' });
@@ -185,23 +183,28 @@ app.post('/api/login', async (req, res) => {
 
         const user = rows[0];
 
+        // Compare hashed password
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Invalid email or password.' });
         }
 
+        // Generate JWT token
         const token = jwt.sign(
             { email: user.email },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
 
-        res.status(200).json({ token });
+        res.status(200).json({ token }); // send token back to frontend
     } catch (error) {
-        console.error(error);
+        console.error('Login error:', error);
         res.status(500).json({ message: 'Error logging in.' });
+    } finally {
+        await connection.end();
     }
 });
+
 
 // Route: Get All Email Addresses
 app.get('/api/users', authenticateToken, async (req, res) => {
