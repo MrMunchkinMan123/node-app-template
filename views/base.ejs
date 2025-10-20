@@ -15,12 +15,12 @@
                 </div>
                 <nav>
                     <ul class="nav-menu">
-                        <li><a href="dashboard.html" id="nav-dashboard">📊 Dashboard</a></li>
-                        <li><a href="workout.html" id="nav-workout">🏋️ Workout</a></li>
-                        <li><a href="progress.html" id="nav-progress">📈 Progress</a></li>
-                        <li><a href="community.html" id="nav-community">👥 Community</a></li>
-                        <li><a href="achievements.html" id="nav-achievements">🏆 Achievements</a></li>
-                        <li><a href="profile.html" id="nav-profile">⚙️ Profile</a></li>
+                        <li><a href="dashboard" id="nav-dashboard">📊 Dashboard</a></li>
+                        <li><a href="workout" id="nav-workout">🏋️ Workout</a></li>
+                        <li><a href="progress" id="nav-progress">📈 Progress</a></li>
+                        <li><a href="community" id="nav-community">👥 Community</a></li>
+                        <li><a href="achievements" id="nav-achievements">🏆 Achievements</a></li>
+                        <li><a href="profile" id="nav-profile">⚙️ Profile</a></li>
                     </ul>
                 </nav>
                 <div class="user-info">
@@ -33,17 +33,15 @@
 
     <main class="main-content">
         <div class="container">
-            <!-- Page content will be inserted here -->
             <div id="page-content">
-                <!-- CONTENT_PLACEHOLDER -->
+                <%- body %>
             </div>
         </div>
     </main>
-
     <script>
         // Check authentication
         function checkAuth() {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('jwtToken');
             if (!token) {
                 window.location.href = 'logon.html';
                 return false;
@@ -53,7 +51,7 @@
 
         // Logout function
         function logout() {
-            localStorage.removeItem('token');
+            localStorage.removeItem('jwtToken');
             localStorage.removeItem('username');
             window.location.href = 'logon.html';
         }

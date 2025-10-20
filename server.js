@@ -68,12 +68,23 @@ app.get('/profile', (req, res) => {
 /////////////////////////////////////////////////
 // Helper function to create a MySQL connection
 async function createConnection() {
-    return await mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-    });
+    try {
+        const connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+        });
+
+        // ✅ Log which database you're connected to
+        const [rows] = await connection.query('SELECT DATABASE() AS current_db');
+        console.log('🔍 Connected to DB:', rows[0].current_db);
+
+        return connection;
+    } catch (err) {
+        console.error('❌ Database connection failed:', err.message);
+        throw err;
+    }
 }
 
 // **Authorization Middleware: Verify JWT Token and Check User in Database**
@@ -214,6 +225,16 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
 
 // Start the server
+
+(async () => {
+    try {
+        const testConn = await createConnection();
+        await testConn.end();
+    } catch (err) {
+        console.error('❌ Failed to connect to DB at startup:', err.message);
+    }
+})();
+
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
