@@ -6,42 +6,43 @@
 <div class="grid-2">
     <div class="card">
         <h3>Create New Workout</h3>
-        <form id="workout-form" onsubmit="handleWorkoutSubmit(event)">
+        <form id="workout-form">
             <div class="form-group">
                 <label for="workout-name">Workout Name</label>
-                <input type="text" id="workout-name" required>
+                <input type="text" id="workout-name" placeholder="e.g., Morning Routine" required>
             </div>
+            
             <div class="form-group">
-                <label for="exercise-name">Exercise</label>
-                <select id="exercise-name" required>
-                    <option value="">Select Exercise</option>
-                    <option value="push-ups">Push-ups</option>
-                    <option value="squats">Squats</option>
-                    <option value="bench-press">Bench Press</option>
-                    <option value="deadlift">Deadlift</option>
-                    <option value="running">Running</option>
-                    <option value="cycling">Cycling</option>
+                <label for="exercise-category">Exercise Category</label>
+                <select id="exercise-category" required>
+                    <option value="">Select Category</option>
+                    <option value="strength">Strength Training</option>
+                    <option value="cardio">Cardio</option>
+                    <option value="flexibility">Flexibility</option>
+                    <option value="bodyweight">Bodyweight</option>
                 </select>
             </div>
+
             <div class="form-group">
-                <label for="sets">Sets</label>
-                <input type="number" id="sets" min="1" required>
+                <label for="exercise-name">Exercise</label>
+                <select id="exercise-name" required disabled>
+                    <option value="">First select a category</option>
+                </select>
             </div>
-            <div class="form-group">
-                <label for="reps">Reps/Duration</label>
-                <input type="number" id="reps" min="1" required>
-            </div>
-            <div class="form-group">
-                <label for="weight">Weight (lbs) - Optional</label>
-                <input type="number" id="weight" min="0">
-            </div>
+
+            <!-- Dynamic form fields container -->
+            <div id="dynamic-fields"></div>
+
             <button type="submit" class="btn">Add Exercise</button>
         </form>
 
-        <div id="current-workout" style="margin-top: 1.5rem;"></div>
+        <div id="current-workout" style="margin-top: 1.5rem;">
+            <h4 style="color: #6b7280; margin-bottom: 0.5rem;">Current Workout Exercises</h4>
+            <p style="color: #9ca3af;">No exercises added yet.</p>
+        </div>
 
-        <button class="btn btn-secondary" onclick="saveWorkout()" style="margin-top: 1rem; width: 100%;">
-            Save Workout
+        <button class="btn btn-secondary" id="save-workout-btn" style="margin-top: 1rem; width: 100%;">
+            💾 Save Workout
         </button>
     </div>
 
@@ -53,113 +54,495 @@
     </div>
 </div>
 
-<script>
-setActiveNav('workout');
-let currentExercises = [];
-
-function handleWorkoutSubmit(event) {
-    event.preventDefault();
-    
-    const exercise = {
-        name: document.getElementById('exercise-name').value,
-        sets: document.getElementById('sets').value,
-        reps: document.getElementById('reps').value,
-        weight: document.getElementById('weight').value || 0
-    };
-    
-    currentExercises.push(exercise);
-    displayCurrentWorkout();
-    event.target.reset();
-}
-
-function displayCurrentWorkout() {
-    const container = document.getElementById('current-workout');
-    if (currentExercises.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    const html = currentExercises.map((ex, index) => `
-        <div class="exercise-item">
-            <div>
-                <strong>${ex.name}</strong><br>
-                <small>${ex.sets} sets × ${ex.reps} reps ${ex.weight > 0 ? `@ ${ex.weight} lbs` : ''}</small>
-            </div>
-            <button onclick="removeExercise(${index})" class="btn" style="padding: 0.5rem;">Remove</button>
+<!-- Workout Modal -->
+<div id="workout-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-workout-name">Workout</h2>
+            <span class="close" id="close-modal">&times;</span>
         </div>
-    `).join('');
-    
-    container.innerHTML = html;
+        <div class="modal-body">
+            <div id="modal-workout-date" style="color: #6b7280; margin-bottom: 1rem;"></div>
+            <div id="modal-exercises"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" id="close-modal-btn">Close</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
 }
 
-function removeExercise(index) {
-    currentExercises.splice(index, 1);
-    displayCurrentWorkout();
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s ease;
 }
 
-async function saveWorkout() {
-    if (currentExercises.length === 0) {
-        alert('Please add at least one exercise');
-        return;
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
     }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--primary);
+}
+
+.close {
+    color: #6b7280;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+    line-height: 1;
+}
+
+.close:hover {
+    color: var(--error);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.workout-history-item {
+    cursor: pointer;
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 5px;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+}
+
+.workout-history-item:hover {
+    transform: translateX(5px);
+    background: var(--card-bg) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.exercise-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--background);
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+</style>
+
+<script>
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+    setActiveNav('workout');
     
-    const workoutName = document.getElementById('workout-name').value;
-    const token = localStorage.getItem('jwtToken');
-    
-    try {
-        const response = await fetch('/api/workouts', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify({
-                name: workoutName,
-                exercises: currentExercises
-            })
-        });
+    let currentExercises = [];
+
+    // Exercise database organized by category
+    const exerciseDatabase = {
+        strength: [
+            { name: 'Bench Press', type: 'strength', fields: ['sets', 'reps', 'weight'] },
+            { name: 'Deadlift', type: 'strength', fields: ['sets', 'reps', 'weight'] },
+            { name: 'Squat', type: 'strength', fields: ['sets', 'reps', 'weight'] },
+            { name: 'Overhead Press', type: 'strength', fields: ['sets', 'reps', 'weight'] },
+            { name: 'Barbell Row', type: 'strength', fields: ['sets', 'reps', 'weight'] },
+            { name: 'Dumbbell Curl', type: 'strength', fields: ['sets', 'reps', 'weight'] },
+            { name: 'Tricep Extension', type: 'strength', fields: ['sets', 'reps', 'weight'] },
+            { name: 'Leg Press', type: 'strength', fields: ['sets', 'reps', 'weight'] }
+        ],
+        cardio: [
+            { name: 'Running', type: 'cardio', fields: ['duration', 'distance'] },
+            { name: 'Cycling', type: 'cardio', fields: ['duration', 'distance'] },
+            { name: 'Swimming', type: 'cardio', fields: ['duration', 'distance'] },
+            { name: 'Rowing Machine', type: 'cardio', fields: ['duration', 'distance'] },
+            { name: 'Jump Rope', type: 'cardio', fields: ['duration'] },
+            { name: 'Elliptical', type: 'cardio', fields: ['duration'] },
+            { name: 'Stair Climber', type: 'cardio', fields: ['duration'] }
+        ],
+        flexibility: [
+            { name: 'Yoga', type: 'flexibility', fields: ['duration'] },
+            { name: 'Stretching', type: 'flexibility', fields: ['duration'] },
+            { name: 'Pilates', type: 'flexibility', fields: ['duration'] },
+            { name: 'Foam Rolling', type: 'flexibility', fields: ['duration'] }
+        ],
+        bodyweight: [
+            { name: 'Push-ups', type: 'bodyweight', fields: ['sets', 'reps'] },
+            { name: 'Pull-ups', type: 'bodyweight', fields: ['sets', 'reps'] },
+            { name: 'Dips', type: 'bodyweight', fields: ['sets', 'reps'] },
+            { name: 'Bodyweight Squats', type: 'bodyweight', fields: ['sets', 'reps'] },
+            { name: 'Lunges', type: 'bodyweight', fields: ['sets', 'reps'] },
+            { name: 'Plank', type: 'bodyweight', fields: ['duration'] },
+            { name: 'Burpees', type: 'bodyweight', fields: ['sets', 'reps'] },
+            { name: 'Mountain Climbers', type: 'bodyweight', fields: ['sets', 'reps'] }
+        ]
+    };
+
+    // Update exercise list based on category
+    function updateExerciseList() {
+        const category = document.getElementById('exercise-category').value;
+        const exerciseSelect = document.getElementById('exercise-name');
+        const dynamicFields = document.getElementById('dynamic-fields');
         
-        if (response.ok) {
-            alert('Workout saved successfully!');
-            currentExercises = [];
-            displayCurrentWorkout();
-            document.getElementById('workout-form').reset();
-            loadWorkoutHistory();
+        exerciseSelect.innerHTML = '<option value="">Select Exercise</option>';
+        dynamicFields.innerHTML = '';
+        
+        if (category && exerciseDatabase[category]) {
+            exerciseSelect.disabled = false;
+            exerciseDatabase[category].forEach(exercise => {
+                const option = document.createElement('option');
+                option.value = JSON.stringify(exercise);
+                option.textContent = exercise.name;
+                exerciseSelect.appendChild(option);
+            });
+        } else {
+            exerciseSelect.disabled = true;
         }
-    } catch (error) {
-        console.error('Error saving workout:', error);
     }
-}
 
-async function loadWorkoutHistory() {
-    const token = localStorage.getItem('jwtToken');
-    
-    try {
-        const response = await fetch('/api/workouts', {
-            headers: { 'Authorization': token }
-        });
+    // Update form fields based on exercise
+    function updateFormFields() {
+        const exerciseSelect = document.getElementById('exercise-name');
+        const dynamicFields = document.getElementById('dynamic-fields');
         
-        if (response.ok) {
-            const workouts = await response.json();
-            
-            if (workouts.length === 0) {
-                document.getElementById('workout-history').innerHTML = '<p>No workouts yet. Start logging!</p>';
-                return;
-            }
-            
-            const html = workouts.map(workout => `
-                <div class="card" style="margin-bottom: 1rem;">
-                    <strong>${workout.name}</strong> - ${workout.date}<br>
-                    <small>${workout.exercises.length} exercises</small>
+        if (!exerciseSelect.value) {
+            dynamicFields.innerHTML = '';
+            return;
+        }
+        
+        const exercise = JSON.parse(exerciseSelect.value);
+        let html = '';
+        
+        if (exercise.fields.includes('sets')) {
+            html += `
+                <div class="form-group">
+                    <label for="sets">Sets</label>
+                    <input type="number" id="sets" min="1" value="3" required>
                 </div>
-            `).join('');
-            
-            document.getElementById('workout-history').innerHTML = html;
+            `;
         }
-    } catch (error) {
-        console.error('Error loading workouts:', error);
+        
+        if (exercise.fields.includes('reps')) {
+            html += `
+                <div class="form-group">
+                    <label for="reps">Reps</label>
+                    <input type="number" id="reps" min="1" value="10" required>
+                </div>
+            `;
+        }
+        
+        if (exercise.fields.includes('weight')) {
+            html += `
+                <div class="form-group">
+                    <label for="weight">Weight (lbs)</label>
+                    <input type="number" id="weight" min="0" step="5" value="0">
+                </div>
+            `;
+        }
+        
+        if (exercise.fields.includes('duration')) {
+            html += `
+                <div class="form-group">
+                    <label for="duration">Duration (minutes)</label>
+                    <input type="number" id="duration" min="1" value="30" required>
+                </div>
+            `;
+        }
+        
+        if (exercise.fields.includes('distance')) {
+            html += `
+                <div class="form-group">
+                    <label for="distance">Distance (miles)</label>
+                    <input type="number" id="distance" min="0" step="0.1" value="0">
+                </div>
+            `;
+        }
+        
+        dynamicFields.innerHTML = html;
     }
-}
 
-loadWorkoutHistory();
+    function handleWorkoutSubmit(event) {
+        event.preventDefault();
+        
+        const exerciseSelect = document.getElementById('exercise-name');
+        if (!exerciseSelect.value) {
+            alert('Please select an exercise');
+            return;
+        }
+        
+        const exerciseData = JSON.parse(exerciseSelect.value);
+        const exercise = {
+            name: exerciseData.name,
+            type: exerciseData.type,
+            category: document.getElementById('exercise-category').value
+        };
+        
+        // Add field values based on exercise type
+        exerciseData.fields.forEach(field => {
+            const input = document.getElementById(field);
+            if (input) {
+                exercise[field] = input.value;
+            }
+        });
+        
+        currentExercises.push(exercise);
+        displayCurrentWorkout();
+        
+        // Reset form
+        document.getElementById('dynamic-fields').innerHTML = '';
+        document.getElementById('exercise-category').value = '';
+        document.getElementById('exercise-name').value = '';
+        document.getElementById('exercise-name').disabled = true;
+    }
+
+    function displayCurrentWorkout() {
+        const container = document.getElementById('current-workout');
+        
+        if (currentExercises.length === 0) {
+            container.innerHTML = '<h4 style="color: #6b7280; margin-bottom: 0.5rem;">Current Workout Exercises</h4><p style="color: #9ca3af;">No exercises added yet.</p>';
+            return;
+        }
+        
+        const html = `
+            <h4 style="color: #6b7280; margin-bottom: 0.5rem;">Current Workout Exercises (${currentExercises.length})</h4>
+            ${currentExercises.map((ex, index) => {
+                let details = '';
+                if (ex.sets) details += `${ex.sets} sets`;
+                if (ex.reps) details += ` × ${ex.reps} reps`;
+                if (ex.weight && ex.weight > 0) details += ` @ ${ex.weight} lbs`;
+                if (ex.duration) details += `${ex.duration} min`;
+                if (ex.distance && ex.distance > 0) details += ` • ${ex.distance} mi`;
+                
+                return `
+                    <div class="exercise-item">
+                        <div>
+                            <strong>${ex.name}</strong>
+                            <span class="badge badge-primary">${ex.category}</span>
+                            <br>
+                            <small>${details}</small>
+                        </div>
+                        <button onclick="window.removeExercise(${index})" class="btn" style="padding: 0.5rem; background: var(--error);">✕</button>
+                    </div>
+                `;
+            }).join('')}
+        `;
+        
+        container.innerHTML = html;
+    }
+
+    window.removeExercise = function(index) {
+        currentExercises.splice(index, 1);
+        displayCurrentWorkout();
+    }
+
+    async function saveWorkout() {
+        if (currentExercises.length === 0) {
+            alert('Please add at least one exercise to your workout');
+            return;
+        }
+        
+        const workoutName = document.getElementById('workout-name').value;
+        if (!workoutName.trim()) {
+            alert('Please enter a workout name');
+            return;
+        }
+        
+        const token = localStorage.getItem('jwtToken');
+        
+        try {
+            const response = await fetch('/api/workouts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token
+                },
+                body: JSON.stringify({
+                    name: workoutName,
+                    exercises: currentExercises,
+                    date: new Date().toISOString()
+                })
+            });
+            
+            if (response.ok) {
+                alert('Workout saved successfully! 💪');
+                currentExercises = [];
+                displayCurrentWorkout();
+                document.getElementById('workout-form').reset();
+                document.getElementById('workout-name').value = '';
+                document.getElementById('dynamic-fields').innerHTML = '';
+                document.getElementById('exercise-name').disabled = true;
+                loadWorkoutHistory();
+            } else {
+                alert('Failed to save workout. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error saving workout:', error);
+            alert('Network error. Please check your connection.');
+        }
+    }
+
+    async function loadWorkoutHistory() {
+        const token = localStorage.getItem('jwtToken');
+        
+        try {
+            const response = await fetch('/api/workouts', {
+                headers: { 'Authorization': token }
+            });
+            
+            if (response.ok) {
+                const workouts = await response.json();
+                
+                if (workouts.length === 0) {
+                    document.getElementById('workout-history').innerHTML = '<p style="color: #6b7280;">No workouts yet. Start your fitness journey today! 💪</p>';
+                    return;
+                }
+                
+                const html = workouts.map(workout => {
+                    const date = new Date(workout.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    
+                    return `
+                        <div class="workout-history-item" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="font-size: 1.1rem;">${workout.name}</strong>
+                                    <br>
+                                    <small style="color: #6b7280;">${date} • ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}</small>
+                                </div>
+                                <span style="font-size: 1.5rem;">→</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('workout-history').innerHTML = html;
+            }
+        } catch (error) {
+            console.error('Error loading workouts:', error);
+            document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load workout history.</p>';
+        }
+    }
+
+    window.openWorkoutModal = function(workoutJson) {
+        const workout = JSON.parse(workoutJson);
+        document.getElementById('modal-workout-name').textContent = workout.name;
+        
+        const date = new Date(workout.date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        document.getElementById('modal-workout-date').textContent = date;
+        
+        const exercisesHtml = workout.exercises.map((ex, index) => {
+            let details = '';
+            if (ex.sets) details += `${ex.sets} sets`;
+            if (ex.reps) details += ` × ${ex.reps} reps`;
+            if (ex.weight && ex.weight > 0) details += ` @ ${ex.weight} lbs`;
+            if (ex.duration) details += `${ex.duration} minutes`;
+            if (ex.distance && ex.distance > 0) details += ` • ${ex.distance} miles`;
+            
+            return `
+                <div class="modal-exercise-item" id="exercise-${index}" style="padding: 1rem; background: var(--background); border-radius: 5px; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin-bottom: 0.25rem;">${ex.name}</h4>
+                        <p style="color: #6b7280; margin: 0;">${details}</p>
+                    </div>
+                    <button class="btn" onclick="window.markExerciseComplete(${index})" id="complete-btn-${index}" style="padding: 0.5rem 1rem;">
+                        ✓ Complete
+                    </button>
+                </div>
+            `;
+        }).join('');
+        
+        document.getElementById('modal-exercises').innerHTML = exercisesHtml;
+        document.getElementById('workout-modal').style.display = 'block';
+    }
+
+    window.markExerciseComplete = function(index) {
+        const exerciseItem = document.getElementById(`exercise-${index}`);
+        const button = document.getElementById(`complete-btn-${index}`);
+        
+        if (exerciseItem && button) {
+            exerciseItem.style.opacity = '0.6';
+            exerciseItem.style.background = '#d1fae5';
+            button.textContent = '✓ Done';
+            button.style.background = 'var(--success)';
+            button.disabled = true;
+        }
+    }
+
+    function closeWorkoutModal() {
+        document.getElementById('workout-modal').style.display = 'none';
+    }
+
+    // Event Listeners
+    document.getElementById('exercise-category').addEventListener('change', updateExerciseList);
+    document.getElementById('exercise-name').addEventListener('change', updateFormFields);
+    document.getElementById('workout-form').addEventListener('submit', handleWorkoutSubmit);
+    document.getElementById('save-workout-btn').addEventListener('click', saveWorkout);
+    document.getElementById('close-modal').addEventListener('click', closeWorkoutModal);
+    document.getElementById('close-modal-btn').addEventListener('click', closeWorkoutModal);
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('workout-modal');
+        if (event.target == modal) {
+            closeWorkoutModal();
+        }
+    }
+
+    // Load workout history on page load
+    loadWorkoutHistory();
+});
 </script>
