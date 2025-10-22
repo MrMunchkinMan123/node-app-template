@@ -637,52 +637,59 @@ document.addEventListener('DOMContentLoaded', function() {
     window.deleteWorkout = deleteWorkout;
 
     async function loadWorkoutHistory() {
-        const token = localStorage.getItem('jwtToken');
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch('/api/workouts', {
+            headers: { 'Authorization': token }
+        });
         
-        try {
-            const response = await fetch('/api/workouts', {
-                headers: { 'Authorization': token }
-            });
+        if (response.ok) {
+            const workouts = await response.json();
             
-            if (response.ok) {
-                const workouts = await response.json();
-                
-                if (workouts.length === 0) {
-                    document.getElementById('workout-history').innerHTML = '<p style="color: #6b7280;">No workouts yet. Start your fitness journey today! 💪</p>';
-                    return;
-                }
-                
-                const html = workouts.map(workout => {
-                    const date = new Date(workout.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    });
-                    
-                    return `
-                        <div class="workout-history-item">
-                            <div class="workout-info" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>
-                                <strong style="font-size: 1.1rem;">${workout.name}</strong>
-                                <br>
-                                <small style="color: #6b7280;">${date} • ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}</small>
-                            </div>
-                            <div class="workout-actions">
-                                <button class="delete-btn" onclick="window.deleteWorkout(${workout.id}, '${workout.name.replace(/'/g, "\\'")}', event)">
-                                    🗑️ Delete
-                                </button>
-                                <span class="view-btn" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>→</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                document.getElementById('workout-history').innerHTML = html;
+            if (workouts.length === 0) {
+                document.getElementById('workout-history').innerHTML = '<p style="color: #6b7280;">No workouts yet. Start your fitness journey today! 💪</p>';
+                return;
             }
-        } catch (error) {
-            console.error('Error loading workouts:', error);
-            document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load workout history.</p>';
+            
+            const html = workouts.map(workout => {
+                const lastDone = new Date(workout.completedAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                
+                const timesText = workout.completionCount === 1 ? 'time' : 'times';
+                
+                return `
+                    <div class="workout-history-item">
+                        <div class="workout-info" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>
+                            <strong style="font-size: 1.1rem;">${workout.name}</strong>
+                            <br>
+                            <small style="color: #6b7280;">
+                                Last done: ${lastDone} • 
+                                Completed ${workout.completionCount} ${timesText} • 
+                                ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}
+                            </small>
+                        </div>
+                        <div class="workout-actions">
+                            <button class="delete-btn" onclick="window.deleteWorkout(${workout.id}, '${workout.name.replace(/'/g, "\\'")}', event)">
+                                🗑️ Delete
+                            </button>
+                            <span class="view-btn" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>→</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('workout-history').innerHTML = html;
         }
+    } catch (error) {
+        console.error('Error loading workouts:', error);
+        document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load workout history.</p>';
     }
+}
+
 
     window.openWorkoutModal = function(workoutJson) {
         const workout = JSON.parse(workoutJson);
@@ -730,13 +737,26 @@ document.addEventListener('DOMContentLoaded', function() {
             completedCount++;
             
             if (completedCount === currentWorkoutData.exercises.length) {
-                setTimeout(() => {
+                setTimeout(async () => {
+                    // Mark workout as complete in database
+                    const token = localStorage.getItem('jwtToken');
+                    try {
+                        await fetch(`/api/workouts/${currentWorkoutData.id}/complete`, {
+                            method: 'POST',
+                            headers: { 'Authorization': token }
+                        });
+                    } catch (error) {
+                        console.error('Error marking workout complete:', error);
+                    }
+                    
                     showToast('🎉 Workout Complete! Great job! 💪', 'success');
                     closeWorkoutModal();
+                    loadWorkoutHistory(); // Reload to show updated count
                 }, 500);
             }
         }
     }
+
 
     function closeWorkoutModal() {
         document.getElementById('workout-modal').style.display = 'none';

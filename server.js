@@ -318,6 +318,8 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
                 ws.id,
                 ws.workout_name as name,
                 ws.workout_date as date,
+                ws.completed_at,
+                ws.completion_count,
                 w.exercise_name,
                 w.exercise_type,
                 w.category,
@@ -330,7 +332,7 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
             FROM workout_sessions ws
             LEFT JOIN workouts w ON ws.id = w.workout_session_id
             WHERE ws.user_id = ?
-            ORDER BY ws.workout_date DESC, w.id`,
+            ORDER BY ws.completed_at DESC, w.id`,
             [userId]
         );
 
@@ -344,6 +346,8 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
                     id: row.id,
                     name: row.name,
                     date: row.date,
+                    completedAt: row.completed_at,
+                    completionCount: row.completion_count,
                     exercises: []
                 };
             }
@@ -369,6 +373,50 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
         res.status(500).json({ message: 'Error loading workouts.' });
     }
 });
+
+// Mark a workout as completed (updates last completed date and count)
+app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
+    const workoutId = req.params.id;
+    const userEmail = req.user.email;
+
+    try {
+        const connection = await createConnection();
+        
+        // Get user_id from email
+        const [userRows] = await connection.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+
+        if (userRows.length === 0) {
+            await connection.end();
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const userId = userRows[0].id;
+
+        // Update completed_at and increment completion_count
+        const [result] = await connection.execute(
+            `UPDATE workout_sessions 
+             SET completed_at = NOW(), 
+                 completion_count = completion_count + 1 
+             WHERE id = ? AND user_id = ?`,
+            [workoutId, userId]
+        );
+
+        await connection.end();
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Workout not found.' });
+        }
+
+        res.status(200).json({ message: 'Workout marked as complete!' });
+    } catch (error) {
+        console.error('Error completing workout:', error);
+        res.status(500).json({ message: 'Error completing workout.' });
+    }
+});
+
 
 // Delete a workout
 app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
