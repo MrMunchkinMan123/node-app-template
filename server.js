@@ -225,6 +225,190 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 //////////////////////////////////////
 //END ROUTES TO HANDLE API REQUESTS
 //////////////////////////////////////
+// Add after your existing routes, before app.listen()
+
+//////////////////////////////////////
+// WORKOUT API ROUTES
+//////////////////////////////////////
+
+// Save a new workout with multiple exercises
+app.post('/api/workouts', authenticateToken, async (req, res) => {
+    const { name, exercises, date } = req.body;
+    const userEmail = req.user.email;
+
+    if (!name || !exercises || exercises.length === 0) {
+        return res.status(400).json({ message: 'Workout name and exercises are required.' });
+    }
+
+    try {
+        const connection = await createConnection();
+        
+        // Get user_id from email
+        const [userRows] = await connection.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+
+        if (userRows.length === 0) {
+            await connection.end();
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const userId = userRows[0].id;
+
+        // Insert workout session
+        const [sessionResult] = await connection.execute(
+            'INSERT INTO workout_sessions (user_id, workout_name, workout_date) VALUES (?, ?, ?)',
+            [userId, name, date || new Date()]
+        );
+
+        const sessionId = sessionResult.insertId;
+
+        // Insert all exercises for this workout
+        for (const exercise of exercises) {
+            await connection.execute(
+                `INSERT INTO workouts 
+                (workout_session_id, exercise_name, exercise_type, category, sets, reps, weight, duration, distance) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    sessionId,
+                    exercise.name,
+                    exercise.type,
+                    exercise.category,
+                    exercise.sets || null,
+                    exercise.reps || null,
+                    exercise.weight || null,
+                    exercise.duration || null,
+                    exercise.distance || null
+                ]
+            );
+        }
+
+        await connection.end();
+        res.status(201).json({ message: 'Workout saved successfully!', workoutId: sessionId });
+    } catch (error) {
+        console.error('Error saving workout:', error);
+        res.status(500).json({ message: 'Error saving workout.' });
+    }
+});
+
+// Get all workouts for the authenticated user
+app.get('/api/workouts', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+
+    try {
+        const connection = await createConnection();
+        
+        // Get user_id from email
+        const [userRows] = await connection.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+
+        if (userRows.length === 0) {
+            await connection.end();
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const userId = userRows[0].id;
+
+        // Get all workout sessions with their exercises
+        const [sessions] = await connection.execute(
+            `SELECT 
+                ws.id,
+                ws.workout_name as name,
+                ws.workout_date as date,
+                w.exercise_name,
+                w.exercise_type,
+                w.category,
+                w.sets,
+                w.reps,
+                w.weight,
+                w.duration,
+                w.distance,
+                w.completed
+            FROM workout_sessions ws
+            LEFT JOIN workouts w ON ws.id = w.workout_session_id
+            WHERE ws.user_id = ?
+            ORDER BY ws.workout_date DESC, w.id`,
+            [userId]
+        );
+
+        await connection.end();
+
+        // Group exercises by workout session
+        const workoutMap = {};
+        sessions.forEach(row => {
+            if (!workoutMap[row.id]) {
+                workoutMap[row.id] = {
+                    id: row.id,
+                    name: row.name,
+                    date: row.date,
+                    exercises: []
+                };
+            }
+            if (row.exercise_name) {
+                workoutMap[row.id].exercises.push({
+                    name: row.exercise_name,
+                    type: row.exercise_type,
+                    category: row.category,
+                    sets: row.sets,
+                    reps: row.reps,
+                    weight: row.weight,
+                    duration: row.duration,
+                    distance: row.distance,
+                    completed: row.completed
+                });
+            }
+        });
+
+        const workouts = Object.values(workoutMap);
+        res.status(200).json(workouts);
+    } catch (error) {
+        console.error('Error loading workouts:', error);
+        res.status(500).json({ message: 'Error loading workouts.' });
+    }
+});
+
+// Delete a workout
+app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
+    const workoutId = req.params.id;
+    const userEmail = req.user.email;
+
+    try {
+        const connection = await createConnection();
+        
+        // Get user_id from email
+        const [userRows] = await connection.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+
+        if (userRows.length === 0) {
+            await connection.end();
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const userId = userRows[0].id;
+
+        // Delete workout (exercises are cascade deleted)
+        const [result] = await connection.execute(
+            'DELETE FROM workout_sessions WHERE id = ? AND user_id = ?',
+            [workoutId, userId]
+        );
+
+        await connection.end();
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Workout not found.' });
+        }
+
+        res.status(200).json({ message: 'Workout deleted successfully!' });
+    } catch (error) {
+        console.error('Error deleting workout:', error);
+        res.status(500).json({ message: 'Error deleting workout.' });
+    }
+});
 
 
 // Start the server
