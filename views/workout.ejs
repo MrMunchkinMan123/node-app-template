@@ -1,72 +1,95 @@
 <div class="page-header">
     <h1>Workout Tracker</h1>
     <p>Log your exercises and track your progress.</p>
+    <button class="btn" onclick="openCreateWorkoutModal()" style="margin-top: 1rem; padding: 0.5rem 1rem; font-size: 0.9rem;">
+        ➕ New Workout
+    </button>
 </div>
 
-<div class="grid-2">
-    <div class="card">
-        <h3>Create New Workout</h3>
-        <form id="workout-form">
-            <div class="form-group">
-                <label for="workout-name">Workout Name</label>
-                <input type="text" id="workout-name" placeholder="e.g., Morning Routine" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="exercise-category">Exercise Category</label>
-                <select id="exercise-category" required>
-                    <option value="">Select Category</option>
-                    <option value="strength">Strength Training</option>
-                    <option value="cardio">Cardio</option>
-                    <option value="flexibility">Flexibility</option>
-                    <option value="bodyweight">Bodyweight</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="exercise-name">Exercise</label>
-                <select id="exercise-name" required disabled>
-                    <option value="">First select a category</option>
-                </select>
-            </div>
-
-            <!-- Dynamic form fields container -->
-            <div id="dynamic-fields"></div>
-
-            <button type="submit" class="btn">Add Exercise</button>
-        </form>
-
-        <div id="current-workout" style="margin-top: 1.5rem;">
-            <h4 style="color: #6b7280; margin-bottom: 0.5rem;">Current Workout Exercises</h4>
-            <p style="color: #9ca3af;">No exercises added yet.</p>
-        </div>
-
-        <button class="btn btn-secondary" id="save-workout-btn" style="margin-top: 1rem; width: 100%;">
-            💾 Save Workout
-        </button>
+<div class="card">
+    <h3>Workout History</h3>
+    <div id="workout-history">
+        <p>Loading workout history...</p>
     </div>
+</div>
 
-    <div class="card">
-        <h3>Workout History</h3>
-        <div id="workout-history">
-            <p>Loading workout history...</p>
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+
+<!-- Confirmation Dialog -->
+<div id="confirm-dialog" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2>Confirm Delete</h2>
+        </div>
+        <div class="modal-body">
+            <p id="confirm-message"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeConfirmDialog()" style="background: #6b7280;">Cancel</button>
+            <button class="btn" onclick="confirmDeleteAction()" style="background: var(--error);">Delete</button>
         </div>
     </div>
 </div>
 
-<!-- Workout Modal -->
+<!-- Create Workout Modal -->
+<div id="create-workout-modal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h2>Create New Workout</h2>
+            <span class="close" onclick="closeCreateWorkoutModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="workout-form">
+                <div class="form-group">
+                    <label for="workout-name">Workout Name</label>
+                    <input type="text" id="workout-name" placeholder="e.g., Morning Routine" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="exercise-category">Exercise Category</label>
+                    <select id="exercise-category" required>
+                        <option value="">Select Category</option>
+                        <option value="strength">Strength Training</option>
+                        <option value="cardio">Cardio</option>
+                        <option value="flexibility">Flexibility</option>
+                        <option value="bodyweight">Bodyweight</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="exercise-name">Exercise</label>
+                    <select id="exercise-name" required disabled>
+                        <option value="">First select a category</option>
+                    </select>
+                </div>
+
+                <div id="dynamic-fields"></div>
+
+                <button type="submit" class="btn">Add Exercise</button>
+            </form>
+
+            <div id="current-workout" style="margin-top: 1.5rem;">
+                <h4 style="color: #6b7280; margin-bottom: 0.5rem;">Current Workout Exercises</h4>
+                <p style="color: #9ca3af;">No exercises added yet.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeCreateWorkoutModal()" style="background: #6b7280;">Cancel</button>
+            <button class="btn btn-secondary" id="save-workout-btn">💾 Save Workout</button>
+        </div>
+    </div>
+</div>
+
+<!-- View Workout Modal -->
 <div id="workout-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h2 id="modal-workout-name">Workout</h2>
-            <span class="close" id="close-modal">&times;</span>
+            <span class="close" onclick="closeWorkoutModal()">&times;</span>
         </div>
         <div class="modal-body">
-            <div id="modal-workout-date" style="color: #6b7280; margin-bottom: 1rem;"></div>
             <div id="modal-exercises"></div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn" id="close-modal-btn">Close</button>
         </div>
     </div>
 </div>
@@ -81,17 +104,21 @@
     width: 100%;
     height: 100%;
     background-color: rgba(0,0,0,0.5);
+    overflow-y: auto;
 }
 
 .modal-content {
     background-color: var(--card-bg);
-    margin: 5% auto;
+    margin: 2% auto;
     padding: 0;
     border-radius: 10px;
     width: 90%;
     max-width: 600px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     animation: slideDown 0.3s ease;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes slideDown {
@@ -111,6 +138,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -133,8 +161,8 @@
 
 .modal-body {
     padding: 1.5rem;
-    max-height: 60vh;
     overflow-y: auto;
+    flex: 1;
 }
 
 .modal-footer {
@@ -142,6 +170,8 @@
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .workout-history-item {
@@ -151,6 +181,9 @@
     border-radius: 5px;
     margin-bottom: 0.75rem;
     transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .workout-history-item:hover {
@@ -159,15 +192,79 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.exercise-item {
+.workout-info {
+    flex: 1;
+}
+
+.workout-actions {
     display: flex;
-    justify-content: space-between;
+    gap: 0.5rem;
     align-items: center;
+}
+
+.delete-btn {
+    background: var(--error);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 0.9rem;
+}
+
+.delete-btn:hover {
+    background: #b91c1c;
+}
+
+.view-btn {
+    color: var(--primary);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.exercise-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1rem;
     padding: 0.75rem;
     background: var(--background);
     border-radius: 5px;
     margin-bottom: 0.5rem;
 }
+
+.exercise-item .btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-exercise-item {
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 5px;
+    margin-bottom: 0.75rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1rem;
+}
+
+.modal-exercise-item .btn {
+    width: 90px;
+    height: 40px;
+    padding: 0;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 
 .badge {
     display: inline-block;
@@ -176,16 +273,61 @@
     font-size: 0.75rem;
     margin-left: 0.5rem;
 }
+
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--primary);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 2000;
+    animation: slideInRight 0.3s ease;
+    max-width: 400px;
+}
+
+.toast.show {
+    display: flex;
+}
+
+.toast.success {
+    background: var(--success);
+}
+
+.toast.error {
+    background: var(--error);
+}
+
+.toast.warning {
+    background: var(--warning);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
 </style>
 
 <script>
-// Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', function() {
     setActiveNav('workout');
     
     let currentExercises = [];
+    let currentWorkoutData = null;
+    let completedCount = 0;
+    let pendingDeleteWorkout = null;
 
-    // Exercise database organized by category
     const exerciseDatabase = {
         strength: [
             { name: 'Bench Press', type: 'strength', fields: ['sets', 'reps', 'weight'] },
@@ -224,7 +366,53 @@ document.addEventListener('DOMContentLoaded', function() {
         ]
     };
 
-    // Update exercise list based on category
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast ' + type + ' show';
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    function showConfirmDialog(message, callback) {
+        document.getElementById('confirm-message').textContent = message;
+        document.getElementById('confirm-dialog').style.display = 'block';
+        pendingDeleteWorkout = callback;
+    }
+
+    function closeConfirmDialog() {
+        document.getElementById('confirm-dialog').style.display = 'none';
+        pendingDeleteWorkout = null;
+    }
+
+    function confirmDeleteAction() {
+        if (pendingDeleteWorkout) {
+            pendingDeleteWorkout();
+        }
+        closeConfirmDialog();
+    }
+
+    window.closeConfirmDialog = closeConfirmDialog;
+    window.confirmDeleteAction = confirmDeleteAction;
+
+    function openCreateWorkoutModal() {
+        document.getElementById('create-workout-modal').style.display = 'block';
+    }
+
+    function closeCreateWorkoutModal() {
+        document.getElementById('create-workout-modal').style.display = 'none';
+        currentExercises = [];
+        document.getElementById('workout-form').reset();
+        document.getElementById('dynamic-fields').innerHTML = '';
+        document.getElementById('exercise-name').disabled = true;
+        displayCurrentWorkout();
+    }
+
+    window.openCreateWorkoutModal = openCreateWorkoutModal;
+    window.closeCreateWorkoutModal = closeCreateWorkoutModal;
+
     function updateExerciseList() {
         const category = document.getElementById('exercise-category').value;
         const exerciseSelect = document.getElementById('exercise-name');
@@ -246,7 +434,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Update form fields based on exercise
     function updateFormFields() {
         const exerciseSelect = document.getElementById('exercise-name');
         const dynamicFields = document.getElementById('dynamic-fields');
@@ -312,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const exerciseSelect = document.getElementById('exercise-name');
         if (!exerciseSelect.value) {
-            alert('Please select an exercise');
+            showToast('Please select an exercise', 'warning');
             return;
         }
         
@@ -323,7 +510,6 @@ document.addEventListener('DOMContentLoaded', function() {
             category: document.getElementById('exercise-category').value
         };
         
-        // Add field values based on exercise type
         exerciseData.fields.forEach(field => {
             const input = document.getElementById(field);
             if (input) {
@@ -334,7 +520,6 @@ document.addEventListener('DOMContentLoaded', function() {
         currentExercises.push(exercise);
         displayCurrentWorkout();
         
-        // Reset form
         document.getElementById('dynamic-fields').innerHTML = '';
         document.getElementById('exercise-category').value = '';
         document.getElementById('exercise-name').value = '';
@@ -361,13 +546,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 return `
                     <div class="exercise-item">
-                        <div>
+                        <div style="flex: 1;">
                             <strong>${ex.name}</strong>
                             <span class="badge badge-primary">${ex.category}</span>
                             <br>
                             <small>${details}</small>
                         </div>
-                        <button onclick="window.removeExercise(${index})" class="btn" style="padding: 0.5rem; background: var(--error);">✕</button>
+                        <button onclick="window.removeExercise(${index})" class="btn" style="background: var(--error);">✕</button>
                     </div>
                 `;
             }).join('')}
@@ -383,13 +568,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function saveWorkout() {
         if (currentExercises.length === 0) {
-            alert('Please add at least one exercise to your workout');
+            showToast('Please add at least one exercise', 'warning');
             return;
         }
         
         const workoutName = document.getElementById('workout-name').value;
         if (!workoutName.trim()) {
-            alert('Please enter a workout name');
+            showToast('Please enter a workout name', 'warning');
             return;
         }
         
@@ -410,22 +595,46 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (response.ok) {
-                alert('Workout saved successfully! 💪');
-                currentExercises = [];
-                displayCurrentWorkout();
-                document.getElementById('workout-form').reset();
-                document.getElementById('workout-name').value = '';
-                document.getElementById('dynamic-fields').innerHTML = '';
-                document.getElementById('exercise-name').disabled = true;
+                showToast('💪 Workout saved successfully!', 'success');
+                closeCreateWorkoutModal();
                 loadWorkoutHistory();
             } else {
-                alert('Failed to save workout. Please try again.');
+                showToast('Failed to save workout', 'error');
             }
         } catch (error) {
             console.error('Error saving workout:', error);
-            alert('Network error. Please check your connection.');
+            showToast('Network error occurred', 'error');
         }
     }
+
+    async function deleteWorkout(workoutId, workoutName, event) {
+        event.stopPropagation();
+        
+        showConfirmDialog(`Are you sure you want to delete "${workoutName}"?`, async () => {
+            const token = localStorage.getItem('jwtToken');
+            
+            try {
+                const response = await fetch(`/api/workouts/${workoutId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                
+                if (response.ok) {
+                    showToast('Workout deleted successfully', 'success');
+                    loadWorkoutHistory();
+                } else {
+                    showToast('Failed to delete workout', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting workout:', error);
+                showToast('Network error occurred', 'error');
+            }
+        });
+    }
+
+    window.deleteWorkout = deleteWorkout;
 
     async function loadWorkoutHistory() {
         const token = localStorage.getItem('jwtToken');
@@ -451,14 +660,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     
                     return `
-                        <div class="workout-history-item" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <strong style="font-size: 1.1rem;">${workout.name}</strong>
-                                    <br>
-                                    <small style="color: #6b7280;">${date} • ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}</small>
-                                </div>
-                                <span style="font-size: 1.5rem;">→</span>
+                        <div class="workout-history-item">
+                            <div class="workout-info" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>
+                                <strong style="font-size: 1.1rem;">${workout.name}</strong>
+                                <br>
+                                <small style="color: #6b7280;">${date} • ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}</small>
+                            </div>
+                            <div class="workout-actions">
+                                <button class="delete-btn" onclick="window.deleteWorkout(${workout.id}, '${workout.name.replace(/'/g, "\\'")}', event)">
+                                    🗑️ Delete
+                                </button>
+                                <span class="view-btn" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>→</span>
                             </div>
                         </div>
                     `;
@@ -474,15 +686,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.openWorkoutModal = function(workoutJson) {
         const workout = JSON.parse(workoutJson);
-        document.getElementById('modal-workout-name').textContent = workout.name;
+        currentWorkoutData = workout;
+        completedCount = 0;
         
-        const date = new Date(workout.date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        });
-        document.getElementById('modal-workout-date').textContent = date;
+        document.getElementById('modal-workout-name').textContent = workout.name;
         
         const exercisesHtml = workout.exercises.map((ex, index) => {
             let details = '';
@@ -493,12 +700,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (ex.distance && ex.distance > 0) details += ` • ${ex.distance} miles`;
             
             return `
-                <div class="modal-exercise-item" id="exercise-${index}" style="padding: 1rem; background: var(--background); border-radius: 5px; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
+                <div class="modal-exercise-item" id="exercise-${index}">
+                    <div style="flex: 1;">
                         <h4 style="margin-bottom: 0.25rem;">${ex.name}</h4>
                         <p style="color: #6b7280; margin: 0;">${details}</p>
                     </div>
-                    <button class="btn" onclick="window.markExerciseComplete(${index})" id="complete-btn-${index}" style="padding: 0.5rem 1rem;">
+                    <button class="btn" onclick="window.markExerciseComplete(${index})" id="complete-btn-${index}">
                         ✓ Complete
                     </button>
                 </div>
@@ -513,36 +720,43 @@ document.addEventListener('DOMContentLoaded', function() {
         const exerciseItem = document.getElementById(`exercise-${index}`);
         const button = document.getElementById(`complete-btn-${index}`);
         
-        if (exerciseItem && button) {
+        if (exerciseItem && button && !button.disabled) {
             exerciseItem.style.opacity = '0.6';
             exerciseItem.style.background = '#d1fae5';
             button.textContent = '✓ Done';
             button.style.background = 'var(--success)';
             button.disabled = true;
+            
+            completedCount++;
+            
+            if (completedCount === currentWorkoutData.exercises.length) {
+                setTimeout(() => {
+                    showToast('🎉 Workout Complete! Great job! 💪', 'success');
+                    closeWorkoutModal();
+                }, 500);
+            }
         }
     }
 
     function closeWorkoutModal() {
         document.getElementById('workout-modal').style.display = 'none';
+        currentWorkoutData = null;
+        completedCount = 0;
     }
 
-    // Event Listeners
+    window.closeWorkoutModal = closeWorkoutModal;
+
     document.getElementById('exercise-category').addEventListener('change', updateExerciseList);
     document.getElementById('exercise-name').addEventListener('change', updateFormFields);
     document.getElementById('workout-form').addEventListener('submit', handleWorkoutSubmit);
     document.getElementById('save-workout-btn').addEventListener('click', saveWorkout);
-    document.getElementById('close-modal').addEventListener('click', closeWorkoutModal);
-    document.getElementById('close-modal-btn').addEventListener('click', closeWorkoutModal);
     
-    // Close modal when clicking outside
     window.onclick = function(event) {
-        const modal = document.getElementById('workout-modal');
-        if (event.target == modal) {
-            closeWorkoutModal();
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
         }
     }
 
-    // Load workout history on page load
     loadWorkoutHistory();
 });
 </script>
