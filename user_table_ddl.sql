@@ -1,19 +1,17 @@
+SELECT DATABASE();
+USE cis440fall2025team5;
 
-select DATABASE();
-use cis440fall2025team5;
-
--- 1) Drop tables if they exist (safe order due to foreign keys)
+-- 1) Drop tables if they exist (CORRECT ORDER - child tables first!)
 -- ========================================
-DROP TABLE IF EXISTS workouts;
-DROP TABLE IF EXISTS exercises;
-DROP TABLE IF EXISTS `user`;
-
+DROP TABLE IF EXISTS workouts;           -- Drop this FIRST (has foreign key to workout_sessions)
+DROP TABLE IF EXISTS workout_sessions;   -- Drop this SECOND (has foreign key to user)
+DROP TABLE IF EXISTS exercises;          -- Drop this (no dependencies)
+DROP TABLE IF EXISTS `user`;             -- Drop this LAST (parent table)
 
 -- ========================================
--- 2) Create `user` table (matches server queries)
---    Contains login metadata: last_login, login_count, last_ip, refresh_token_hash
+-- 2) Create `user` table
 -- ========================================
-CREATE TABLE IF NOT EXISTS `user` (
+CREATE TABLE `user` (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     username VARCHAR(50) DEFAULT NULL,
@@ -32,13 +30,10 @@ CREATE TABLE IF NOT EXISTS `user` (
     INDEX (username)
 );
 
-
--- Add this AFTER dropping tables and BEFORE creating user table
-
 -- ========================================
--- 3) Create Exercises table
+-- 3) Create workout_sessions table
 -- ========================================
-CREATE TABLE IF NOT EXISTS exercises (
+CREATE TABLE workout_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     workout_name VARCHAR(255) NOT NULL,
@@ -49,9 +44,9 @@ CREATE TABLE IF NOT EXISTS exercises (
 );
 
 -- ========================================
--- 4) Create Workouts table
+-- 4) Create workouts table
 -- ========================================
-CREATE TABLE IF NOT EXISTS workouts (
+CREATE TABLE workouts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     workout_session_id INT NOT NULL,
     exercise_name VARCHAR(255) NOT NULL,
@@ -67,31 +62,49 @@ CREATE TABLE IF NOT EXISTS workouts (
     INDEX idx_session (workout_session_id)
 );
 
-
-
-
+-- ========================================
+-- 5) Insert sample users
+-- ========================================
 INSERT INTO `user` (email, username, password, display_name) VALUES
-    ('alice@example.com','alice','hash1','Alice'),
-    ('bob@example.com','bob','hash2','Bob'),
-    ('carol@example.com','carol','hash3','Carol');
+    ('alice@example.com','alice','$2a$10$XYZ','Alice'),
+    ('bob@example.com','bob','$2a$10$ABC','Bob'),
+    ('carol@example.com','carol','$2a$10$DEF','Carol');
 
+-- ========================================
+-- 6) Insert sample workout sessions
+-- ========================================
+INSERT INTO workout_sessions (user_id, workout_name, workout_date) VALUES
+    (1, 'Morning Routine', '2025-10-20 08:00:00'),
+    (2, 'Leg Day', '2025-10-21 18:00:00'),
+    (3, 'Cardio Blast', '2025-10-22 07:00:00');
 
+-- ========================================
+-- 7) Insert sample workouts (exercises)
+-- ========================================
+INSERT INTO workouts (workout_session_id, exercise_name, exercise_type, category, sets, reps, weight) VALUES
+    (1, 'Push-ups', 'bodyweight', 'bodyweight', 3, 15, NULL),
+    (1, 'Pull-ups', 'bodyweight', 'bodyweight', 3, 10, NULL),
+    (2, 'Squat', 'strength', 'strength', 4, 12, 135.00),
+    (2, 'Leg Press', 'strength', 'strength', 3, 15, 200.00),
+    (3, 'Running', 'cardio', 'cardio', NULL, NULL, NULL);
 
-INSERT INTO exercises (name, category, default_unit) VALUES
-    ('Push-up','strength','reps'),
-    ('Squat','strength','reps'),
-    ('Running','cardio','km');
+-- Update cardio exercise with duration and distance
+UPDATE workouts SET duration = 30, distance = 3.5 WHERE exercise_name = 'Running';
 
-
-
-INSERT INTO workouts (user_id, exercise_id, sets, reps, weight, duration_minutes, distance_km) VALUES
-    (1,1,3,15,NULL,NULL,NULL),
-    (2,2,3,12,50.00,NULL,NULL),
-    (3,3,NULL,NULL,NULL,30.00,5.00);
-
-
-SELECT id, email, username, display_name, last_login, login_count FROM `user` LIMIT 10;
-SELECT * FROM user;
-
-
-
+-- ========================================
+-- Verify the data
+-- ========================================
+SELECT 
+    u.email,
+    ws.workout_name,
+    ws.workout_date,
+    w.exercise_name,
+    w.sets,
+    w.reps,
+    w.weight,
+    w.duration,
+    w.distance
+FROM `user` u
+JOIN workout_sessions ws ON u.id = ws.user_id
+JOIN workouts w ON ws.id = w.workout_session_id
+ORDER BY ws.workout_date DESC, w.id;
