@@ -36,9 +36,9 @@ CREATE TABLE IF NOT EXISTS `user` (
 -- Add this AFTER dropping tables and BEFORE creating user table
 
 -- ========================================
--- NEW: workout_sessions table (stores workout metadata)
+-- 3) Create Exercises table
 -- ========================================
-CREATE TABLE IF NOT EXISTS workout_sessions (
+CREATE TABLE IF NOT EXISTS exercises (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     workout_name VARCHAR(255) NOT NULL,
@@ -49,10 +49,8 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
 );
 
 -- ========================================
--- MODIFY: workouts table (now stores individual exercises in a session)
+-- 4) Create Workouts table
 -- ========================================
-DROP TABLE IF EXISTS workouts;
-
 CREATE TABLE IF NOT EXISTS workouts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     workout_session_id INT NOT NULL,
@@ -71,34 +69,29 @@ CREATE TABLE IF NOT EXISTS workouts (
 
 
 
--- ========================================
--- 5) Insert sample users (passwords are placeholders - hash real passwords in your app)
--- ========================================
+
 INSERT INTO `user` (email, username, password, display_name) VALUES
     ('alice@example.com','alice','hash1','Alice'),
     ('bob@example.com','bob','hash2','Bob'),
     ('carol@example.com','carol','hash3','Carol');
 
 
--- ========================================
--- 6) Insert sample exercises
--- ========================================
+
 INSERT INTO exercises (name, category, default_unit) VALUES
     ('Push-up','strength','reps'),
     ('Squat','strength','reps'),
     ('Running','cardio','km');
 
 
--- ========================================
--- 7) Insert sample workouts
--- ========================================
+
 INSERT INTO workouts (user_id, exercise_id, sets, reps, weight, duration_minutes, distance_km) VALUES
     (1,1,3,15,NULL,NULL,NULL),
     (2,2,3,12,50.00,NULL,NULL),
     (3,3,NULL,NULL,NULL,30.00,5.00);
 
--- Helpful SELECT to inspect table contents
+
 SELECT id, email, username, display_name, last_login, login_count FROM `user` LIMIT 10;
+SELECT * FROM user;
 
 
 
