@@ -33,34 +33,42 @@ CREATE TABLE IF NOT EXISTS `user` (
 );
 
 
--- ========================================
--- 3) Create Exercises table
--- ========================================
-CREATE TABLE IF NOT EXISTS exercises (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    category ENUM('strength','cardio') NOT NULL,
-    default_unit VARCHAR(20) DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
+-- Add this AFTER dropping tables and BEFORE creating user table
 
 -- ========================================
--- 4) Create Workouts table
+-- NEW: workout_sessions table (stores workout metadata)
 -- ========================================
-CREATE TABLE IF NOT EXISTS workouts (
+CREATE TABLE IF NOT EXISTS workout_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    exercise_id INT NOT NULL,
+    workout_name VARCHAR(255) NOT NULL,
+    workout_date DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
+    INDEX idx_user_date (user_id, workout_date)
+);
+
+-- ========================================
+-- MODIFY: workouts table (now stores individual exercises in a session)
+-- ========================================
+DROP TABLE IF EXISTS workouts;
+
+CREATE TABLE IF NOT EXISTS workouts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    workout_session_id INT NOT NULL,
+    exercise_name VARCHAR(255) NOT NULL,
+    exercise_type VARCHAR(50) NOT NULL,
+    category VARCHAR(50) NOT NULL,
     sets INT DEFAULT NULL,
     reps INT DEFAULT NULL,
     weight DECIMAL(8,2) DEFAULT NULL,
-    duration_minutes DECIMAL(6,2) DEFAULT NULL,
-    distance_km DECIMAL(6,2) DEFAULT NULL,
-    logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
-    FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+    duration INT DEFAULT NULL,
+    distance DECIMAL(6,2) DEFAULT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (workout_session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    INDEX idx_session (workout_session_id)
 );
+
 
 
 -- ========================================
