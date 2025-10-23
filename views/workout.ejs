@@ -652,14 +652,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // Sort by most recent timestamp
+            // Use completedAt if workout has been done, otherwise use createdAt
+            workouts.sort((a, b) => {
+                const dateA = a.completionCount > 0 
+                    ? new Date(a.completedAt) 
+                    : new Date(a.createdAt || a.date);
+                    
+                const dateB = b.completionCount > 0 
+                    ? new Date(b.completedAt) 
+                    : new Date(b.createdAt || b.date);
+                    
+                return dateB - dateA; // Newest first
+            });
+            
             const html = workouts.map(workout => {
-                const lastDone = new Date(workout.completedAt).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                });
+                let dateText;
                 
-                const timesText = workout.completionCount === 1 ? 'time' : 'times';
+                if (workout.completionCount === 0) {
+                    // Never completed - show created date
+                    const createdDate = new Date(workout.createdAt || workout.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    dateText = `Created: ${createdDate}`;
+                } else {
+                    // Has been completed - show last done date
+                    const lastDone = new Date(workout.completedAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    const timesText = workout.completionCount === 1 ? 'time' : 'times';
+                    dateText = `Last done: ${lastDone} • Completed ${workout.completionCount} ${timesText}`;
+                }
                 
                 return `
                     <div class="workout-history-item">
@@ -667,8 +694,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <strong style="font-size: 1.1rem;">${workout.name}</strong>
                             <br>
                             <small style="color: #6b7280;">
-                                Last done: ${lastDone} • 
-                                Completed ${workout.completionCount} ${timesText} • 
+                                ${dateText} • 
                                 ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}
                             </small>
                         </div>
@@ -689,6 +715,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load workout history.</p>';
     }
 }
+
+
+
 
 
     window.openWorkoutModal = function(workoutJson) {

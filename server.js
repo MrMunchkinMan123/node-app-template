@@ -313,6 +313,7 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
         const userId = userRows[0].id;
 
         // Get all workout sessions with their exercises
+        // Order by completed_at if exists, otherwise by created_at (DESC = newest first)
         const [sessions] = await connection.execute(
             `SELECT 
                 ws.id,
@@ -320,6 +321,7 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
                 ws.workout_date as date,
                 ws.completed_at,
                 ws.completion_count,
+                ws.created_at,
                 w.exercise_name,
                 w.exercise_type,
                 w.category,
@@ -332,7 +334,9 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
             FROM workout_sessions ws
             LEFT JOIN workouts w ON ws.id = w.workout_session_id
             WHERE ws.user_id = ?
-            ORDER BY ws.completed_at DESC, w.id`,
+            ORDER BY 
+                COALESCE(ws.completed_at, ws.created_at) DESC,
+                w.id`,
             [userId]
         );
 
@@ -348,6 +352,7 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
                     date: row.date,
                     completedAt: row.completed_at,
                     completionCount: row.completion_count,
+                    createdAt: row.created_at,
                     exercises: []
                 };
             }
@@ -373,6 +378,7 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
         res.status(500).json({ message: 'Error loading workouts.' });
     }
 });
+
 
 // Mark a workout as completed (updates last completed date and count)
 app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
