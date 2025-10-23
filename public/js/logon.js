@@ -10,6 +10,7 @@ loginTab.addEventListener('click', () => {
     createAccountForm.classList.remove('active-form');
     loginTab.classList.add('active');
     createAccountTab.classList.remove('active');
+    messageEl.classList.remove('show');
 });
 
 createAccountTab.addEventListener('click', () => {
@@ -17,6 +18,7 @@ createAccountTab.addEventListener('click', () => {
     logonForm.classList.remove('active-form');
     createAccountTab.classList.add('active');
     loginTab.classList.remove('active');
+    messageEl.classList.remove('show');
 });
 
 // Logon form submission
@@ -35,21 +37,23 @@ logonForm.addEventListener('submit', async (event) => {
         const result = await response.json();
         if (response.ok) {
             localStorage.setItem('jwtToken', result.token);
+            localStorage.setItem('userName', result.name); // Store user's name
             window.location.href = '/dashboard';
         } else {
             messageEl.textContent = result.message;
-            messageEl.classList.add('error');
+            messageEl.className = 'alert error show';
         }
     } catch (error) {
         console.error('Error:', error);
         messageEl.textContent = 'An error occurred. Please try again later.';
-        messageEl.classList.add('error');
+        messageEl.className = 'alert error show';
     }
 });
 
 // Create account form submission
 createAccountForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const name = document.getElementById('create-name').value;
     const email = document.getElementById('create-email').value;
     const password = document.getElementById('create-password').value;
 
@@ -57,26 +61,28 @@ createAccountForm.addEventListener('submit', async (event) => {
         const response = await fetch('/api/create-account', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ name, email, password }),
         });
 
         const result = await response.json();
         if (response.ok) {
             messageEl.textContent = 'Account created successfully! You can now log in.';
-            messageEl.classList.add('success');
+            messageEl.className = 'alert success show';
             document.getElementById('login-email').value = email;
             document.getElementById('login-password').value = password;
-            logonForm.classList.add('active-form');
-            createAccountForm.classList.remove('active-form');
-            loginTab.classList.add('active');
-            createAccountTab.classList.remove('active');
+            setTimeout(() => {
+                logonForm.classList.add('active-form');
+                createAccountForm.classList.remove('active-form');
+                loginTab.classList.add('active');
+                createAccountTab.classList.remove('active');
+            }, 1500);
         } else {
             messageEl.textContent = result.message;
-            messageEl.classList.add('error');
+            messageEl.className = 'alert error show';
         }
     } catch (error) {
         console.error('Error:', error);
         messageEl.textContent = 'An error occurred. Please try again later.';
-        messageEl.classList.add('error');
+        messageEl.className = 'alert error show';
     }
 });

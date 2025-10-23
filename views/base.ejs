@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitTracker - Your Fitness Journey</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title><%= typeof title !== 'undefined' ? title : 'FitTracker - Your Fitness Journey' %></title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
     <header class="header">
@@ -15,12 +15,12 @@
                 </div>
                 <nav>
                     <ul class="nav-menu">
-                        <li><a href="dashboard" id="nav-dashboard">📊 Dashboard</a></li>
-                        <li><a href="workout" id="nav-workout">🏋️ Workout</a></li>
-                        <li><a href="progress" id="nav-progress">📈 Progress</a></li>
-                        <li><a href="community" id="nav-community">👥 Community</a></li>
-                        <li><a href="achievements" id="nav-achievements">🏆 Achievements</a></li>
-                        <li><a href="profile" id="nav-profile">⚙️ Profile</a></li>
+                        <li><a href="/dashboard" id="nav-dashboard">📊 Dashboard</a></li>
+                        <li><a href="/workout" id="nav-workout">🏋️ Workout</a></li>
+                        <li><a href="/progress" id="nav-progress">📈 Progress</a></li>
+                        <li><a href="/community" id="nav-community">👥 Community</a></li>
+                        <li><a href="/achievements" id="nav-achievements">🏆 Achievements</a></li>
+                        <li><a href="/profile" id="nav-profile">⚙️ Profile</a></li>
                     </ul>
                 </nav>
                 <div class="user-info">
@@ -33,17 +33,16 @@
 
     <main class="main-content">
         <div class="container">
-            <div id="page-content">
-                <%- body %>
-            </div>
+            <%- body %>
         </div>
     </main>
+
     <script>
         // Check authentication
         function checkAuth() {
             const token = localStorage.getItem('jwtToken');
             if (!token) {
-                window.location.href = 'logon.html';
+                window.location.href = '/';
                 return false;
             }
             return true;
@@ -52,15 +51,17 @@
         // Logout function
         function logout() {
             localStorage.removeItem('jwtToken');
-            localStorage.removeItem('username');
-            window.location.href = 'logon.html';
+            localStorage.removeItem('userName');  // Changed from 'username' to 'userName'
+            window.location.href = '/';
         }
 
         // Load user info
         function loadUserInfo() {
-            const username = localStorage.getItem('username');
-            if (username) {
-                document.getElementById('username-display').textContent = username;
+            const userName = localStorage.getItem('userName');  // Changed from 'username' to 'userName'
+            if (userName) {
+                document.getElementById('username-display').textContent = `👤 ${userName}`;
+            } else {
+                document.getElementById('username-display').textContent = '👤 User';
             }
         }
 
