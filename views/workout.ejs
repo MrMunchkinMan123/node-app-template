@@ -7,9 +7,9 @@
 </div>
 
 <div class="card">
-    <h3>Workout History</h3>
+    <h3>Saved Workouts</h3>
     <div id="workout-history">
-        <p>Loading workout history...</p>
+        <p>Loading Saved Workouts...</p>
     </div>
 </div>
 
@@ -712,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } catch (error) {
         console.error('Error loading workouts:', error);
-        document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load workout history.</p>';
+        document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load Saved Workouts.</p>';
     }
 }
 
