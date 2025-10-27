@@ -107,6 +107,14 @@
     overflow-y: auto;
 }
 
+.modal.closing {
+    animation: fadeOut 0.3s ease;
+}
+
+.modal.closing .modal-content {
+    animation: slideUp 0.3s ease;
+}
+
 .modal-content {
     background-color: var(--card-bg);
     margin: 2% auto;
@@ -129,6 +137,26 @@
     to {
         transform: translateY(0);
         opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-50px);
+        opacity: 0;
     }
 }
 
@@ -265,13 +293,17 @@
     justify-content: center;
 }
 
-
 .badge {
     display: inline-block;
     padding: 0.25rem 0.5rem;
     border-radius: 12px;
     font-size: 0.75rem;
     margin-left: 0.5rem;
+}
+
+.badge-primary {
+    background: var(--primary);
+    color: white;
 }
 
 .toast {
@@ -327,6 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentWorkoutData = null;
     let completedCount = 0;
     let pendingDeleteWorkout = null;
+    let workoutsCache = []; // Cache for event delegation
 
     const exerciseDatabase = {
         strength: [
@@ -366,6 +399,13 @@ document.addEventListener('DOMContentLoaded', function() {
         ]
     };
 
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         toast.textContent = message;
@@ -383,8 +423,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function closeConfirmDialog() {
-        document.getElementById('confirm-dialog').style.display = 'none';
-        pendingDeleteWorkout = null;
+        const modal = document.getElementById('confirm-dialog');
+        modal.classList.add('closing');
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('closing');
+            pendingDeleteWorkout = null;
+        }, 300);
     }
 
     function confirmDeleteAction() {
@@ -402,12 +448,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function closeCreateWorkoutModal() {
-        document.getElementById('create-workout-modal').style.display = 'none';
-        currentExercises = [];
-        document.getElementById('workout-form').reset();
-        document.getElementById('dynamic-fields').innerHTML = '';
-        document.getElementById('exercise-name').disabled = true;
-        displayCurrentWorkout();
+        const modal = document.getElementById('create-workout-modal');
+        modal.classList.add('closing');
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('closing');
+            currentExercises = [];
+            document.getElementById('workout-form').reset();
+            document.getElementById('dynamic-fields').innerHTML = '';
+            document.getElementById('exercise-name').disabled = true;
+            displayCurrentWorkout();
+        }, 300);
     }
 
     window.openCreateWorkoutModal = openCreateWorkoutModal;
@@ -547,10 +599,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return `
                     <div class="exercise-item">
                         <div style="flex: 1;">
-                            <strong>${ex.name}</strong>
-                            <span class="badge badge-primary">${ex.category}</span>
+                            <strong>${escapeHtml(ex.name)}</strong>
+                            <span class="badge badge-primary">${escapeHtml(ex.category)}</span>
                             <br>
-                            <small>${details}</small>
+                            <small>${escapeHtml(details)}</small>
                         </div>
                         <button onclick="window.removeExercise(${index})" class="btn" style="background: var(--error);">✕</button>
                     </div>
@@ -594,6 +646,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
             });
             
+            if (response.status === 401 || response.status === 403) {
+                showToast('Session expired. Please login again.', 'error');
+                setTimeout(() => logout(), 2000);
+                return;
+            }
+            
             if (response.ok) {
                 showToast('💪 Workout saved successfully!', 'success');
                 closeCreateWorkoutModal();
@@ -607,9 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function deleteWorkout(workoutId, workoutName, event) {
-        event.stopPropagation();
-        
+    async function deleteWorkout(workoutId, workoutName) {
         showConfirmDialog(`Are you sure you want to delete "${workoutName}"?`, async () => {
             const token = localStorage.getItem('jwtToken');
             
@@ -620,6 +676,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Authorization': token
                     }
                 });
+                
+                if (response.status === 401 || response.status === 403) {
+                    showToast('Session expired. Please login again.', 'error');
+                    setTimeout(() => logout(), 2000);
+                    return;
+                }
                 
                 if (response.ok) {
                     showToast('Workout deleted successfully', 'success');
@@ -634,94 +696,107 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    window.deleteWorkout = deleteWorkout;
-
     async function loadWorkoutHistory() {
-    const token = localStorage.getItem('jwtToken');
-    
-    try {
-        const response = await fetch('/api/workouts', {
-            headers: { 'Authorization': token }
-        });
+        const token = localStorage.getItem('jwtToken');
         
-        if (response.ok) {
-            const workouts = await response.json();
+        try {
+            const response = await fetch('/api/workouts', {
+                headers: { 'Authorization': token }
+            });
             
-            if (workouts.length === 0) {
-                document.getElementById('workout-history').innerHTML = '<p style="color: #6b7280;">No workouts yet. Start your fitness journey today! 💪</p>';
+            if (response.status === 401 || response.status === 403) {
+                showToast('Session expired. Please login again.', 'error');
+                setTimeout(() => logout(), 2000);
                 return;
             }
             
-            // Sort by most recent timestamp
-            // Use completedAt if workout has been done, otherwise use createdAt
-            workouts.sort((a, b) => {
-                const dateA = a.completionCount > 0 
-                    ? new Date(a.completedAt) 
-                    : new Date(a.createdAt || a.date);
-                    
-                const dateB = b.completionCount > 0 
-                    ? new Date(b.completedAt) 
-                    : new Date(b.createdAt || b.date);
-                    
-                return dateB - dateA; // Newest first
-            });
-            
-            const html = workouts.map(workout => {
-                let dateText;
+            if (response.ok) {
+                const workouts = await response.json();
+                workoutsCache = workouts; // Store for event delegation
                 
-                if (workout.completionCount === 0) {
-                    // Never completed - show created date
-                    const createdDate = new Date(workout.createdAt || workout.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    });
-                    dateText = `Created: ${createdDate}`;
-                } else {
-                    // Has been completed - show last done date
-                    const lastDone = new Date(workout.completedAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    });
-                    const timesText = workout.completionCount === 1 ? 'time' : 'times';
-                    dateText = `Last done: ${lastDone} • Completed ${workout.completionCount} ${timesText}`;
+                if (workouts.length === 0) {
+                    document.getElementById('workout-history').innerHTML = '<p style="color: #6b7280;">No workouts yet. Start your fitness journey today! 💪</p>';
+                    return;
                 }
                 
-                return `
-                    <div class="workout-history-item">
-                        <div class="workout-info" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>
-                            <strong style="font-size: 1.1rem;">${workout.name}</strong>
-                            <br>
-                            <small style="color: #6b7280;">
-                                ${dateText} • 
-                                ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}
-                            </small>
+                // Sort by most recent timestamp
+                workouts.sort((a, b) => {
+                    const dateA = a.completionCount > 0 
+                        ? new Date(a.completedAt) 
+                        : new Date(a.createdAt || a.date);
+                    const dateB = b.completionCount > 0 
+                        ? new Date(b.completedAt) 
+                        : new Date(b.createdAt || b.date);
+                    return dateB - dateA;
+                });
+                
+                const html = workouts.map(workout => {
+                    let dateText;
+                    
+                    if (workout.completionCount === 0) {
+                        const createdDate = new Date(workout.createdAt || workout.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                        });
+                        dateText = `Created: ${createdDate}`;
+                    } else {
+                        const lastDone = new Date(workout.completedAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                        });
+                        const timesText = workout.completionCount === 1 ? 'time' : 'times';
+                        dateText = `Last done: ${lastDone} • Completed ${workout.completionCount} ${timesText}`;
+                    }
+                    
+                    return `
+                        <div class="workout-history-item" data-workout-id="${workout.id}">
+                            <div class="workout-info">
+                                <strong style="font-size: 1.1rem;">${escapeHtml(workout.name)}</strong>
+                                <br>
+                                <small style="color: #6b7280;">
+                                    ${dateText} • 
+                                    ${workout.exercises.length} exercise${workout.exercises.length !== 1 ? 's' : ''}
+                                </small>
+                            </div>
+                            <div class="workout-actions">
+                                <button class="delete-btn" data-workout-id="${workout.id}" data-workout-name="${escapeHtml(workout.name)}">
+                                    🗑️ Delete
+                                </button>
+                                <span class="view-btn">→</span>
+                            </div>
                         </div>
-                        <div class="workout-actions">
-                            <button class="delete-btn" onclick="window.deleteWorkout(${workout.id}, '${workout.name.replace(/'/g, "\\'")}', event)">
-                                🗑️ Delete
-                            </button>
-                            <span class="view-btn" onclick='window.openWorkoutModal(${JSON.stringify(JSON.stringify(workout))})'>→</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            document.getElementById('workout-history').innerHTML = html;
+                    `;
+                }).join('');
+                
+                const container = document.getElementById('workout-history');
+                container.innerHTML = html;
+                
+                // Add event delegation for clicks
+                container.onclick = function(e) {
+                    const workoutItem = e.target.closest('.workout-history-item');
+                    if (!workoutItem) return;
+                    
+                    const workoutId = parseInt(workoutItem.dataset.workoutId);
+                    const workout = workoutsCache.find(w => w.id === workoutId);
+                    
+                    if (e.target.classList.contains('delete-btn')) {
+                        e.stopPropagation();
+                        const name = e.target.dataset.workoutName;
+                        deleteWorkout(workoutId, name);
+                    } else if (e.target.classList.contains('view-btn') || e.target.classList.contains('workout-info') || e.target.closest('.workout-info')) {
+                        openWorkoutModalSafe(workout);
+                    }
+                };
+            }
+        } catch (error) {
+            console.error('Error loading workouts:', error);
+            document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load Saved Workouts.</p>';
         }
-    } catch (error) {
-        console.error('Error loading workouts:', error);
-        document.getElementById('workout-history').innerHTML = '<p style="color: var(--error);">Failed to load Saved Workouts.</p>';
     }
-}
 
-
-
-
-
-    window.openWorkoutModal = function(workoutJson) {
-        const workout = JSON.parse(workoutJson);
+    function openWorkoutModalSafe(workout) {
         currentWorkoutData = workout;
         completedCount = 0;
         
@@ -738,8 +813,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return `
                 <div class="modal-exercise-item" id="exercise-${index}">
                     <div style="flex: 1;">
-                        <h4 style="margin-bottom: 0.25rem;">${ex.name}</h4>
-                        <p style="color: #6b7280; margin: 0;">${details}</p>
+                        <h4 style="margin-bottom: 0.25rem;">${escapeHtml(ex.name)}</h4>
+                        <p style="color: #6b7280; margin: 0;">${escapeHtml(details)}</p>
                     </div>
                     <button class="btn" onclick="window.markExerciseComplete(${index})" id="complete-btn-${index}">
                         ✓ Complete
@@ -756,41 +831,56 @@ document.addEventListener('DOMContentLoaded', function() {
         const exerciseItem = document.getElementById(`exercise-${index}`);
         const button = document.getElementById(`complete-btn-${index}`);
         
-        if (exerciseItem && button && !button.disabled) {
+        if (button.disabled) return; // Prevent double-clicks
+        button.disabled = true;
+        
+        if (exerciseItem && button) {
             exerciseItem.style.opacity = '0.6';
             exerciseItem.style.background = '#d1fae5';
             button.textContent = '✓ Done';
             button.style.background = 'var(--success)';
-            button.disabled = true;
             
             completedCount++;
             
             if (completedCount === currentWorkoutData.exercises.length) {
-                setTimeout(async () => {
-                    // Mark workout as complete in database
-                    const token = localStorage.getItem('jwtToken');
-                    try {
-                        await fetch(`/api/workouts/${currentWorkoutData.id}/complete`, {
-                            method: 'POST',
-                            headers: { 'Authorization': token }
-                        });
-                    } catch (error) {
-                        console.error('Error marking workout complete:', error);
+                // Show success message immediately
+                showToast('🎉 Workout Complete! Great job! 💪', 'success');
+                
+                // Close modal with animation
+                closeWorkoutModal();
+                
+                // Update database in background
+                const token = localStorage.getItem('jwtToken');
+                fetch(`/api/workouts/${currentWorkoutData.id}/complete`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                })
+                .then(response => {
+                    if (response.status === 401 || response.status === 403) {
+                        showToast('Session expired. Please login again.', 'error');
+                        setTimeout(() => logout(), 2000);
+                        return;
                     }
-                    
-                    showToast('🎉 Workout Complete! Great job! 💪', 'success');
-                    closeWorkoutModal();
-                    loadWorkoutHistory(); // Reload to show updated count
-                }, 500);
+                    loadWorkoutHistory();
+                })
+                .catch(error => {
+                    console.error('Error marking workout complete:', error);
+                    loadWorkoutHistory();
+                });
             }
         }
     }
 
-
     function closeWorkoutModal() {
-        document.getElementById('workout-modal').style.display = 'none';
-        currentWorkoutData = null;
-        completedCount = 0;
+        const modal = document.getElementById('workout-modal');
+        modal.classList.add('closing');
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('closing');
+            currentWorkoutData = null;
+            completedCount = 0;
+        }, 300);
     }
 
     window.closeWorkoutModal = closeWorkoutModal;
@@ -802,7 +892,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     window.onclick = function(event) {
         if (event.target.classList.contains('modal')) {
-            event.target.style.display = 'none';
+            if (event.target.id === 'workout-modal') {
+                closeWorkoutModal();
+            } else if (event.target.id === 'create-workout-modal') {
+                closeCreateWorkoutModal();
+            } else if (event.target.id === 'confirm-dialog') {
+                closeConfirmDialog();
+            }
         }
     }
 

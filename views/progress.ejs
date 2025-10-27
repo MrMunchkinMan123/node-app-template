@@ -3,23 +3,703 @@
     <p>Visualize your fitness journey with detailed analytics.</p>
 </div>
 
-<div class="card">
-    <h3>📊 Workout Frequency</h3>
-    <p style="text-align: center; padding: 2rem; color: #6b7280;">Chart Placeholder - Workouts per Week</p>
-</div>
-
-<div class="card">
-    <h3>📈 Strength Progress</h3>
-    <p style="text-align: center; padding: 2rem; color: #6b7280;">Chart Placeholder - Weight Progress</p>
-</div>
-
-<div class="card">
-    <h3>Exercise Breakdown</h3>
-    <div id="exercise-stats">
-        <p style="text-align: center; color: #6b7280;">Complete some workouts to see your exercise statistics!</p>
+<!-- Summary Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">💪</div>
+        <div class="stat-content">
+            <h3 id="total-workouts">0</h3>
+            <p>Total Workouts</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🏋️</div>
+        <div class="stat-content">
+            <h3 id="total-exercises">0</h3>
+            <p>Total Exercises</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-content">
+            <h3 id="current-streak">0</h3>
+            <p>Day Streak</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-content">
+            <h3 id="this-week">0</h3>
+            <p>This Week</p>
+        </div>
     </div>
 </div>
 
+<!-- Activity Calendar -->
+<div class="card">
+    <h3>📅 Recent Activity</h3>
+    <div id="activity-calendar">
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading activity data...</p>
+    </div>
+</div>
+
+<!-- Category Breakdown -->
+<div class="card">
+    <h3>📊 Exercise Category Breakdown</h3>
+    <div id="category-breakdown">
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading category data...</p>
+    </div>
+</div>
+
+<!-- Personal Records -->
+<div class="card">
+    <h3>🏆 Personal Records</h3>
+    <div id="personal-records">
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">Complete some workouts to see your records!</p>
+    </div>
+</div>
+
+<!-- Most Popular Exercises -->
+<div class="card">
+    <h3>⭐ Most Popular Exercises</h3>
+    <div id="popular-exercises">
+        <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading exercise data...</p>
+    </div>
+</div>
+
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.stat-content h3 {
+    margin: 0;
+    font-size: 2rem;
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.stat-content p {
+    margin: 0.25rem 0 0 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.activity-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.activity-day {
+    aspect-ratio: 1;
+    background: var(--background);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.activity-day:hover {
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.activity-day.has-workout {
+    background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+    color: white;
+    font-weight: bold;
+}
+
+.activity-day.future {
+    opacity: 0.3;
+}
+
+.day-label {
+    font-size: 0.7rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+}
+
+.day-count {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.category-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.category-label {
+    min-width: 120px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.category-bar-container {
+    flex: 1;
+    height: 30px;
+    background: var(--background);
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+}
+
+.category-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.75rem;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+    transition: width 1s ease-out;
+    width: 0;
+}
+
+.category-bar.strength {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.category-bar.cardio {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.category-bar.flexibility {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.category-bar.bodyweight {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.category-count {
+    min-width: 50px;
+    text-align: right;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.records-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.record-item {
+    background: var(--background);
+    padding: 1.25rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+.record-item h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+.record-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.record-detail {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.exercise-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.exercise-rank-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.exercise-rank-item:hover {
+    background: var(--card-bg);
+    transform: translateX(5px);
+}
+
+.rank-badge {
+    min-width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.rank-badge.gold {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white;
+}
+
+.rank-badge.silver {
+    background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+    color: white;
+}
+
+.rank-badge.bronze {
+    background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+    color: white;
+}
+
+.rank-badge.other {
+    background: var(--primary);
+    color: white;
+}
+
+.exercise-rank-info {
+    flex: 1;
+}
+
+.exercise-rank-info strong {
+    display: block;
+    font-size: 1.05rem;
+    margin-bottom: 0.25rem;
+}
+
+.exercise-rank-info small {
+    color: #6b7280;
+}
+
+.exercise-rank-count {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card, .card {
+    animation: slideInUp 0.5s ease-out backwards;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+</style>
+
 <script>
-setActiveNav('progress');
+document.addEventListener('DOMContentLoaded', async function() {
+    setActiveNav('progress');
+    
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch('/api/workouts', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+            showNoDataMessage();
+            return;
+        }
+        
+        if (response.ok) {
+            const workouts = await response.json();
+            
+            if (workouts.length === 0) {
+                showNoDataMessage();
+                return;
+            }
+            
+            calculateAndDisplayStats(workouts);
+            displayActivityCalendar(workouts);
+            displayCategoryBreakdown(workouts);
+            displayPersonalRecords(workouts);
+            displayPopularExercises(workouts);
+        }
+    } catch (error) {
+        console.error('Error loading progress data:', error);
+        showNoDataMessage();
+    }
+    
+    function showNoDataMessage() {
+        document.getElementById('activity-calendar').innerHTML = 
+            '<p style="text-align: center; color: #6b7280; padding: 2rem;">Start tracking workouts to see your progress! 💪</p>';
+        document.getElementById('category-breakdown').innerHTML = 
+            '<p style="text-align: center; color: #6b7280; padding: 2rem;">No data yet. Complete some workouts!</p>';
+    }
+    
+    function calculateAndDisplayStats(workouts) {
+        // Total workouts completed
+        const completedWorkouts = workouts.filter(w => w.completionCount > 0);
+        const totalCompletions = completedWorkouts.reduce((sum, w) => sum + w.completionCount, 0);
+        
+        // Total exercises
+        const totalExercises = workouts.reduce((sum, w) => sum + w.exercises.length, 0);
+        
+        // Calculate streak
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const completedDates = completedWorkouts
+            .filter(w => w.completedAt)
+            .map(w => {
+                const d = new Date(w.completedAt);
+                d.setHours(0, 0, 0, 0);
+                return d.getTime();
+            })
+            .filter((v, i, a) => a.indexOf(v) === i)
+            .sort((a, b) => b - a);
+        
+        let streak = 0;
+        let checkDate = today.getTime();
+        
+        for (let date of completedDates) {
+            if (date === checkDate || date === checkDate - 86400000) {
+                streak++;
+                checkDate = date - 86400000;
+            } else {
+                break;
+            }
+        }
+        
+        // This week count
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const thisWeekCount = completedWorkouts.filter(w => {
+            if (!w.completedAt) return false;
+            const d = new Date(w.completedAt);
+            return d >= weekStart;
+        }).length;
+        
+        // Animate counters
+        animateCounter('total-workouts', totalCompletions);
+        animateCounter('total-exercises', totalExercises);
+        animateCounter('current-streak', streak);
+        animateCounter('this-week', thisWeekCount);
+    }
+    
+    function animateCounter(id, target) {
+        const element = document.getElementById(id);
+        let current = 0;
+        const increment = Math.ceil(target / 50);
+        const duration = 1000;
+        const stepTime = duration / (target / increment);
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                element.textContent = target;
+                clearInterval(timer);
+            } else {
+                element.textContent = current;
+            }
+        }, stepTime);
+    }
+    
+    function displayActivityCalendar(workouts) {
+        const container = document.getElementById('activity-calendar');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Get last 28 days (4 weeks)
+        const days = [];
+        for (let i = 27; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(today.getDate() - i);
+            days.push(date);
+        }
+        
+        // Count workouts per day
+        const workoutsByDay = {};
+        workouts
+            .filter(w => w.completedAt)
+            .forEach(w => {
+                const date = new Date(w.completedAt);
+                date.setHours(0, 0, 0, 0);
+                const key = date.getTime();
+                workoutsByDay[key] = (workoutsByDay[key] || 0) + 1;
+            });
+        
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        
+        const html = `
+            <div class="activity-calendar">
+                ${days.map(date => {
+                    const key = date.getTime();
+                    const count = workoutsByDay[key] || 0;
+                    const isFuture = date > today;
+                    const dayName = dayNames[date.getDay()];
+                    const dayNum = date.getDate();
+                    
+                    return `
+                        <div class="activity-day ${count > 0 ? 'has-workout' : ''} ${isFuture ? 'future' : ''}"
+                             title="${date.toLocaleDateString()}: ${count} workout${count !== 1 ? 's' : ''}">
+                            <div class="day-label">${dayName}</div>
+                            <div class="day-count">${isFuture ? '' : (count || '·')}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    function displayCategoryBreakdown(workouts) {
+        const container = document.getElementById('category-breakdown');
+        
+        const categoryCount = {};
+        const categoryIcons = {
+            strength: '💪',
+            cardio: '🏃',
+            flexibility: '🧘',
+            bodyweight: '🤸'
+        };
+        
+        workouts.forEach(workout => {
+            workout.exercises.forEach(ex => {
+                const cat = ex.category || 'other';
+                categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+            });
+        });
+        
+        const total = Object.values(categoryCount).reduce((sum, count) => sum + count, 0);
+        
+        if (total === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No exercises logged yet.</p>';
+            return;
+        }
+        
+        const sortedCategories = Object.entries(categoryCount)
+            .sort((a, b) => b[1] - a[1]);
+        
+        const html = `
+            <div class="category-chart">
+                ${sortedCategories.map(([category, count]) => {
+                    const percentage = Math.round((count / total) * 100);
+                    const icon = categoryIcons[category] || '📊';
+                    
+                    return `
+                        <div class="category-item">
+                            <div class="category-label">
+                                <span>${icon}</span>
+                                <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                            </div>
+                            <div class="category-bar-container">
+                                <div class="category-bar ${category}" data-width="${percentage}%">
+                                    ${percentage}%
+                                </div>
+                            </div>
+                            <div class="category-count">${count}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+        // Animate bars
+        setTimeout(() => {
+            document.querySelectorAll('.category-bar').forEach(bar => {
+                bar.style.width = bar.dataset.width;
+            });
+        }, 100);
+    }
+    
+    function displayPersonalRecords(workouts) {
+        const container = document.getElementById('personal-records');
+        
+        let maxWeight = 0;
+        let maxWeightExercise = '';
+        let longestDuration = 0;
+        let longestDurationExercise = '';
+        let mostSets = 0;
+        let mostSetsExercise = '';
+        let longestDistance = 0;
+        let longestDistanceExercise = '';
+        
+        workouts.forEach(workout => {
+            workout.exercises.forEach(ex => {
+                if (ex.weight && parseFloat(ex.weight) > maxWeight) {
+                    maxWeight = parseFloat(ex.weight);
+                    maxWeightExercise = ex.name;
+                }
+                if (ex.duration && parseFloat(ex.duration) > longestDuration) {
+                    longestDuration = parseFloat(ex.duration);
+                    longestDurationExercise = ex.name;
+                }
+                if (ex.sets && parseInt(ex.sets) > mostSets) {
+                    mostSets = parseInt(ex.sets);
+                    mostSetsExercise = ex.name;
+                }
+                if (ex.distance && parseFloat(ex.distance) > longestDistance) {
+                    longestDistance = parseFloat(ex.distance);
+                    longestDistanceExercise = ex.name;
+                }
+            });
+        });
+        
+        const records = [];
+        
+        if (maxWeight > 0) {
+            records.push({
+                title: 'Heaviest Weight',
+                value: `${maxWeight} lbs`,
+                detail: maxWeightExercise
+            });
+        }
+        
+        if (longestDuration > 0) {
+            records.push({
+                title: 'Longest Duration',
+                value: `${longestDuration} min`,
+                detail: longestDurationExercise
+            });
+        }
+        
+        if (mostSets > 0) {
+            records.push({
+                title: 'Most Sets',
+                value: mostSets,
+                detail: mostSetsExercise
+            });
+        }
+        
+        if (longestDistance > 0) {
+            records.push({
+                title: 'Longest Distance',
+                value: `${longestDistance} mi`,
+                detail: longestDistanceExercise
+            });
+        }
+        
+        if (records.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">Complete workouts with metrics to see your records!</p>';
+            return;
+        }
+        
+        const html = `
+            <div class="records-grid">
+                ${records.map(record => `
+                    <div class="record-item">
+                        <h4>${record.title}</h4>
+                        <div class="record-value">${record.value}</div>
+                        <div class="record-detail">${record.detail}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    function displayPopularExercises(workouts) {
+        const container = document.getElementById('popular-exercises');
+        
+        const exerciseCount = {};
+        
+        workouts.forEach(workout => {
+            workout.exercises.forEach(ex => {
+                exerciseCount[ex.name] = (exerciseCount[ex.name] || 0) + 1;
+            });
+        });
+        
+        const sorted = Object.entries(exerciseCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        
+        if (sorted.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No exercises yet!</p>';
+            return;
+        }
+        
+        const html = `
+            <div class="exercise-list">
+                ${sorted.map(([name, count], index) => {
+                    let badgeClass = 'other';
+                    if (index === 0) badgeClass = 'gold';
+                    else if (index === 1) badgeClass = 'silver';
+                    else if (index === 2) badgeClass = 'bronze';
+                    
+                    return `
+                        <div class="exercise-rank-item">
+                            <div class="rank-badge ${badgeClass}">${index + 1}</div>
+                            <div class="exercise-rank-info">
+                                <strong>${name}</strong>
+                                <small>Performed ${count} time${count !== 1 ? 's' : ''}</small>
+                            </div>
+                            <div class="exercise-rank-count">${count}</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+});
 </script>

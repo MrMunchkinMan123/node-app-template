@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const expressLayouts = require('express-ejs-layouts');
 
 const app = express();
+
 // Set up EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', __dirname + '/views');
@@ -15,11 +16,35 @@ app.use(expressLayouts);
 app.set('layout', 'base'); // Default layout file is base.ejs
 
 const port = 3000;
+
 // Middleware to parse JSON bodies
 app.use(express.json());
 
 // Serve static files from the "public" folder
 app.use(express.static('public'));
+
+//////////////////////////////////////
+// CREATE CONNECTION POOL (ONCE)
+//////////////////////////////////////
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Test connection at startup
+(async () => {
+    try {
+        const [rows] = await pool.query('SELECT DATABASE() AS current_db');
+        console.log('🔍 Connected to DB:', rows[0].current_db);
+    } catch (err) {
+        console.error('❌ Failed to connect to DB at startup:', err.message);
+    }
+})();
 
 //////////////////////////////////////
 //ROUTES TO SERVE HTML FILES
@@ -28,11 +53,6 @@ app.use(express.static('public'));
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/public/logon.html');
 });
-
-// Route to serve dashboard.html
-// app.get('/dashboard', (req, res) => {
-//     res.sendFile(__dirname + '/public/dashboard.html');
-// });
 
 app.get('/dashboard', (req, res) => {
     res.render('dashboard', { title: 'Dashboard - FitTracker' });
@@ -62,31 +82,9 @@ app.get('/profile', (req, res) => {
 //END ROUTES TO SERVE HTML FILES
 //////////////////////////////////////
 
-
 /////////////////////////////////////////////////
-//HELPER FUNCTIONS AND AUTHENTICATION MIDDLEWARE
+//AUTHENTICATION MIDDLEWARE
 /////////////////////////////////////////////////
-// Helper function to create a MySQL connection
-async function createConnection() {
-    try {
-        const connection = await mysql.createConnection({
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
-        });
-
-        // ✅ Log which database you're connected to
-        const [rows] = await connection.query('SELECT DATABASE() AS current_db');
-        console.log('🔍 Connected to DB:', rows[0].current_db);
-
-        return connection;
-    } catch (err) {
-        console.error('❌ Database connection failed:', err.message);
-        throw err;
-    }
-}
-
 // **Authorization Middleware: Verify JWT Token and Check User in Database**
 async function authenticateToken(req, res, next) {
     const token = req.headers['authorization'];
@@ -101,15 +99,11 @@ async function authenticateToken(req, res, next) {
         }
 
         try {
-            const connection = await createConnection();
-
-            // Query the database to verify that the email is associated with an active account
-            const [rows] = await connection.execute(
+            // Use pool directly - no need to create/close connections
+            const [rows] = await pool.execute(
                 'SELECT email FROM user WHERE email = ?',
                 [decoded.email]
             );
-
-            await connection.end();  // Close connection
 
             if (rows.length === 0) {
                 return res.status(403).json({ message: 'Account not found or deactivated.' });
@@ -124,14 +118,12 @@ async function authenticateToken(req, res, next) {
     });
 }
 /////////////////////////////////////////////////
-//END HELPER FUNCTIONS AND AUTHENTICATION MIDDLEWARE
+//END AUTHENTICATION MIDDLEWARE
 /////////////////////////////////////////////////
-
 
 //////////////////////////////////////
 //ROUTES TO HANDLE API REQUESTS
 //////////////////////////////////////
-// Route: Create Account
 // Route: Create Account
 app.post('/api/create-account', async (req, res) => {
     const { name, email, password } = req.body;
@@ -140,13 +132,11 @@ app.post('/api/create-account', async (req, res) => {
     }
 
     try {
-        const connection = await createConnection();
         const hashedPassword = await bcrypt.hash(password, 10);
-        const [result] = await connection.execute(
+        const [result] = await pool.execute(
             'INSERT INTO user (email, password, display_name) VALUES (?, ?, ?)',
             [email, hashedPassword, name]
         );
-        await connection.end();
         res.status(201).json({ message: 'Account created successfully!' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
@@ -166,12 +156,10 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        const connection = await createConnection();
-        const [rows] = await connection.execute(
+        const [rows] = await pool.execute(
             'SELECT * FROM user WHERE email = ?',
             [email]
         );
-        await connection.end();
 
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Invalid email or password.' });
@@ -199,17 +187,10 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-
-
 // Route: Get All Email Addresses
 app.get('/api/users', authenticateToken, async (req, res) => {
     try {
-        const connection = await createConnection();
-
-        const [rows] = await connection.execute('SELECT email FROM user');
-
-        await connection.end();  // Close connection
-
+        const [rows] = await pool.execute('SELECT email FROM user');
         const emailList = rows.map((row) => row.email);
         res.status(200).json({ emails: emailList });
     } catch (error) {
@@ -217,10 +198,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
         res.status(500).json({ message: 'Error retrieving email addresses.' });
     }
 });
-//////////////////////////////////////
-//END ROUTES TO HANDLE API REQUESTS
-//////////////////////////////////////
-// Add after your existing routes, before app.listen()
 
 //////////////////////////////////////
 // WORKOUT API ROUTES
@@ -236,23 +213,20 @@ app.post('/api/workouts', authenticateToken, async (req, res) => {
     }
 
     try {
-        const connection = await createConnection();
-        
         // Get user_id from email
-        const [userRows] = await connection.execute(
+        const [userRows] = await pool.execute(
             'SELECT id FROM user WHERE email = ?',
             [userEmail]
         );
 
         if (userRows.length === 0) {
-            await connection.end();
             return res.status(404).json({ message: 'User not found.' });
         }
 
         const userId = userRows[0].id;
 
         // Insert workout session
-        const [sessionResult] = await connection.execute(
+        const [sessionResult] = await pool.execute(
             'INSERT INTO workout_sessions (user_id, workout_name, workout_date) VALUES (?, ?, ?)',
             [userId, name, date || new Date()]
         );
@@ -261,7 +235,7 @@ app.post('/api/workouts', authenticateToken, async (req, res) => {
 
         // Insert all exercises for this workout
         for (const exercise of exercises) {
-            await connection.execute(
+            await pool.execute(
                 `INSERT INTO workouts 
                 (workout_session_id, exercise_name, exercise_type, category, sets, reps, weight, duration, distance) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -279,7 +253,6 @@ app.post('/api/workouts', authenticateToken, async (req, res) => {
             );
         }
 
-        await connection.end();
         res.status(201).json({ message: 'Workout saved successfully!', workoutId: sessionId });
     } catch (error) {
         console.error('Error saving workout:', error);
@@ -292,24 +265,20 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
     const userEmail = req.user.email;
 
     try {
-        const connection = await createConnection();
-        
         // Get user_id from email
-        const [userRows] = await connection.execute(
+        const [userRows] = await pool.execute(
             'SELECT id FROM user WHERE email = ?',
             [userEmail]
         );
 
         if (userRows.length === 0) {
-            await connection.end();
             return res.status(404).json({ message: 'User not found.' });
         }
 
         const userId = userRows[0].id;
 
         // Get all workout sessions with their exercises
-        // Order by completed_at if exists, otherwise by created_at (DESC = newest first)
-        const [sessions] = await connection.execute(
+        const [sessions] = await pool.execute(
             `SELECT 
                 ws.id,
                 ws.workout_name as name,
@@ -334,8 +303,6 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
                 w.id`,
             [userId]
         );
-
-        await connection.end();
 
         // Group exercises by workout session
         const workoutMap = {};
@@ -374,38 +341,32 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
     }
 });
 
-
-// Mark a workout as completed (updates last completed date and count)
+// Mark a workout as completed
 app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
     const workoutId = req.params.id;
     const userEmail = req.user.email;
 
     try {
-        const connection = await createConnection();
-        
         // Get user_id from email
-        const [userRows] = await connection.execute(
+        const [userRows] = await pool.execute(
             'SELECT id FROM user WHERE email = ?',
             [userEmail]
         );
 
         if (userRows.length === 0) {
-            await connection.end();
             return res.status(404).json({ message: 'User not found.' });
         }
 
         const userId = userRows[0].id;
 
         // Update completed_at and increment completion_count
-        const [result] = await connection.execute(
+        const [result] = await pool.execute(
             `UPDATE workout_sessions 
              SET completed_at = NOW(), 
                  completion_count = completion_count + 1 
              WHERE id = ? AND user_id = ?`,
             [workoutId, userId]
         );
-
-        await connection.end();
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Workout not found.' });
@@ -418,35 +379,29 @@ app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
     }
 });
 
-
 // Delete a workout
 app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
     const workoutId = req.params.id;
     const userEmail = req.user.email;
 
     try {
-        const connection = await createConnection();
-        
         // Get user_id from email
-        const [userRows] = await connection.execute(
+        const [userRows] = await pool.execute(
             'SELECT id FROM user WHERE email = ?',
             [userEmail]
         );
 
         if (userRows.length === 0) {
-            await connection.end();
             return res.status(404).json({ message: 'User not found.' });
         }
 
         const userId = userRows[0].id;
 
         // Delete workout (exercises are cascade deleted)
-        const [result] = await connection.execute(
+        const [result] = await pool.execute(
             'DELETE FROM workout_sessions WHERE id = ? AND user_id = ?',
             [workoutId, userId]
         );
-
-        await connection.end();
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Workout not found.' });
@@ -459,22 +414,11 @@ app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
     }
 });
 
+//////////////////////////////////////
+//END ROUTES TO HANDLE API REQUESTS
+//////////////////////////////////////
 
 // Start the server
-
-(async () => {
-    try {
-        const testConn = await createConnection();
-        await testConn.end();
-    } catch (err) {
-        console.error('❌ Failed to connect to DB at startup:', err.message);
-    }
-})();
-
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
-
-// state
-
-// state for me
