@@ -35,19 +35,20 @@
     </div>
 </div>
 
-<!-- Activity Calendar -->
-<div class="card">
-    <h3>📅 Recent Activity</h3>
-    <div id="activity-calendar">
-        <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading activity data...</p>
+<!-- Activity Calendar and Category Breakdown Side by Side -->
+<div class="two-column-grid">
+    <div class="card">
+        <h3>📅 Recent Activity</h3>
+        <div id="activity-calendar">
+            <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading...</p>
+        </div>
     </div>
-</div>
 
-<!-- Category Breakdown -->
-<div class="card">
-    <h3>📊 Exercise Category Breakdown</h3>
-    <div id="category-breakdown">
-        <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading category data...</p>
+    <div class="card">
+        <h3>📊 Category Breakdown</h3>
+        <div id="category-breakdown">
+            <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading...</p>
+        </div>
     </div>
 </div>
 
@@ -71,6 +72,13 @@
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.two-column-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1rem;
     margin-bottom: 2rem;
 }
@@ -112,7 +120,7 @@
 .activity-calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
+    gap: 0.4rem;
     margin-top: 1rem;
 }
 
@@ -124,7 +132,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     transition: all 0.2s;
     cursor: pointer;
     border: 2px solid transparent;
@@ -132,7 +140,7 @@
 
 .activity-day:hover {
     border-color: var(--primary);
-    transform: scale(1.05);
+    transform: scale(1.1);
 }
 
 .activity-day.has-workout {
@@ -146,13 +154,17 @@
 }
 
 .day-label {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     color: #6b7280;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
+}
+
+.activity-day.has-workout .day-label {
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .day-count {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: bold;
 }
 
@@ -166,22 +178,23 @@
 .category-item {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .category-label {
-    min-width: 120px;
+    min-width: 100px;
     font-weight: 500;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-size: 0.9rem;
 }
 
 .category-bar-container {
     flex: 1;
-    height: 30px;
+    height: 28px;
     background: var(--background);
-    border-radius: 15px;
+    border-radius: 14px;
     overflow: hidden;
     position: relative;
 }
@@ -189,14 +202,14 @@
 .category-bar {
     height: 100%;
     background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%);
-    border-radius: 15px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding-right: 0.75rem;
     color: white;
     font-weight: bold;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     transition: width 1s ease-out;
     width: 0;
 }
@@ -218,10 +231,11 @@
 }
 
 .category-count {
-    min-width: 50px;
+    min-width: 40px;
     text-align: right;
     font-weight: bold;
     color: var(--primary);
+    font-size: 0.9rem;
 }
 
 .records-grid {
@@ -347,6 +361,12 @@
 .stat-card:nth-child(2) { animation-delay: 0.2s; }
 .stat-card:nth-child(3) { animation-delay: 0.3s; }
 .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+@media (max-width: 768px) {
+    .two-column-grid {
+        grid-template-columns: 1fr;
+    }
+}
 </style>
 
 <script>
@@ -464,9 +484,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        // Get last 28 days (4 weeks)
+        // Get last 14 days (2 weeks) - REDUCED FROM 28
         const days = [];
-        for (let i = 27; i >= 0; i--) {
+        for (let i = 13; i >= 0; i--) {
             const date = new Date(today);
             date.setDate(today.getDate() - i);
             days.push(date);
