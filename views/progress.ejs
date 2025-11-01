@@ -26,13 +26,6 @@
             <p>Day Streak</p>
         </div>
     </div>
-    <div class="stat-card">
-        <div class="stat-icon">📅</div>
-        <div class="stat-content">
-            <h3 id="this-week">0</h3>
-            <p>This Week</p>
-        </div>
-    </div>
 </div>
 
 <!-- Activity Calendar and Category Breakdown Side by Side -->
@@ -52,19 +45,37 @@
     </div>
 </div>
 
-<!-- Personal Records -->
-<div class="card">
-    <h3>🏆 Personal Records</h3>
-    <div id="personal-records">
-        <p style="text-align: center; color: #6b7280; padding: 2rem;">Complete some workouts to see your records!</p>
-    </div>
-</div>
-
 <!-- Most Popular Exercises -->
 <div class="card">
     <h3>⭐ Most Popular Exercises</h3>
     <div id="popular-exercises">
         <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading exercise data...</p>
+    </div>
+</div>
+
+<!-- Day Detail Modal -->
+<div id="day-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-day-title">Workouts</h2>
+            <span class="close" onclick="closeDayModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="modal-day-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Detail Modal -->
+<div id="category-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-category-title">Exercises</h2>
+            <span class="close" onclick="closeCategoryModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="modal-category-content"></div>
+        </div>
     </div>
 </div>
 
@@ -81,6 +92,23 @@
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1rem;
     margin-bottom: 2rem;
+    align-items: stretch;
+}
+
+.two-column-grid .card {
+    display: flex;
+    flex-direction: column;
+}
+
+.two-column-grid .card > h3 {
+    flex-shrink: 0;
+    margin-bottom: 1rem;
+}
+
+.two-column-grid .card > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .stat-card {
@@ -95,8 +123,8 @@
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .stat-icon {
@@ -122,6 +150,7 @@
     grid-template-columns: repeat(7, 1fr);
     gap: 0.4rem;
     margin-top: 1rem;
+    flex: 1;
 }
 
 .activity-day {
@@ -151,6 +180,7 @@
 
 .activity-day.future {
     opacity: 0.3;
+    cursor: default;
 }
 
 .day-label {
@@ -171,32 +201,48 @@
 .category-chart {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0;
     margin-top: 1rem;
+    flex: 1;
+    justify-content: space-between;
 }
 
 .category-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    cursor: pointer;
+    padding: 0.5rem 0.5rem;
+    border-radius: 5px;
+    transition: background 0.2s;
+    flex: 1;
+    min-height: 0;
+}
+
+.category-item:hover {
+    background: var(--background);
 }
 
 .category-label {
     min-width: 100px;
+    width: 100px;
     font-weight: 500;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
+    flex-shrink: 0;
 }
 
 .category-bar-container {
     flex: 1;
-    height: 28px;
+    height: auto;
+    min-height: 24px;
     background: var(--background);
     border-radius: 14px;
     overflow: hidden;
     position: relative;
+    min-width: 0;
 }
 
 .category-bar {
@@ -209,9 +255,10 @@
     padding-right: 0.75rem;
     color: white;
     font-weight: bold;
-    font-size: 0.8rem;
+    font-size: clamp(0.65rem, 1.5vw, 0.85rem);
     transition: width 1s ease-out;
     width: 0;
+    white-space: nowrap;
 }
 
 .category-bar.strength {
@@ -236,37 +283,7 @@
     font-weight: bold;
     color: var(--primary);
     font-size: 0.9rem;
-}
-
-.records-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.record-item {
-    background: var(--background);
-    padding: 1.25rem;
-    border-radius: 8px;
-    border-left: 4px solid var(--primary);
-}
-
-.record-item h4 {
-    margin: 0 0 0.5rem 0;
-    color: var(--primary);
-    font-size: 0.9rem;
-}
-
-.record-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 0.25rem;
-}
-
-.record-detail {
-    font-size: 0.85rem;
-    color: #6b7280;
+    flex-shrink: 0;
 }
 
 .exercise-list {
@@ -287,8 +304,8 @@
 }
 
 .exercise-rank-item:hover {
-    background: var(--card-bg);
-    transform: translateX(5px);
+    background: var(--background);
+    transform: none;
 }
 
 .rank-badge {
@@ -342,6 +359,151 @@
     color: var(--primary);
 }
 
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    overflow-y: auto;
+}
+
+.modal.closing {
+    animation: fadeOut 0.3s ease forwards;
+    pointer-events: none;
+}
+
+.modal.closing .modal-content {
+    animation: slideUp 0.3s ease forwards;
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 2% auto;
+    padding: 0;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s ease;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--primary);
+}
+
+.close {
+    color: #6b7280;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+    line-height: 1;
+}
+
+.close:hover {
+    color: var(--error);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.workout-detail-item {
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+
+.workout-detail-item h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary);
+}
+
+.workout-detail-item p {
+    margin: 0.25rem 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.exercise-detail-item {
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.exercise-detail-info {
+    flex: 1;
+}
+
+.exercise-detail-info h4 {
+    margin: 0 0 0.25rem 0;
+}
+
+.exercise-detail-info small {
+    color: #6b7280;
+}
+
+.exercise-detail-stats {
+    text-align: right;
+    color: var(--primary);
+    font-weight: bold;
+}
+
 @keyframes slideInUp {
     from {
         opacity: 0;
@@ -360,7 +522,6 @@
 .stat-card:nth-child(1) { animation-delay: 0.1s; }
 .stat-card:nth-child(2) { animation-delay: 0.2s; }
 .stat-card:nth-child(3) { animation-delay: 0.3s; }
-.stat-card:nth-child(4) { animation-delay: 0.4s; }
 
 @media (max-width: 768px) {
     .two-column-grid {
@@ -374,30 +535,40 @@ document.addEventListener('DOMContentLoaded', async function() {
     setActiveNav('progress');
     
     const token = localStorage.getItem('jwtToken');
+    let workoutsByDay = {};
+    let exercisesByCategory = {};
     
     try {
-        const response = await fetch('/api/workouts', {
+        const statsResponse = await fetch('/api/progress/stats', {
             headers: { 'Authorization': token }
         });
         
-        if (response.status === 401 || response.status === 403) {
-            showNoDataMessage();
-            return;
-        }
+        const recordsResponse = await fetch('/api/progress/records', {
+            headers: { 'Authorization': token }
+        });
         
-        if (response.ok) {
-            const workouts = await response.json();
+        if (statsResponse.ok && recordsResponse.ok) {
+            const stats = await statsResponse.json();
+            const records = await recordsResponse.json();
             
-            if (workouts.length === 0) {
-                showNoDataMessage();
-                return;
+            const workoutsResponse = await fetch('/api/workouts', {
+                headers: { 'Authorization': token }
+            });
+            
+            let totalCompletions = 0;
+            if (workoutsResponse.ok) {
+                const workouts = await workoutsResponse.json();
+                totalCompletions = workouts.reduce((sum, w) => sum + (w.completionCount || 0), 0);
+                
+                displayActivityCalendar(workouts);
             }
             
-            calculateAndDisplayStats(workouts);
-            displayActivityCalendar(workouts);
-            displayCategoryBreakdown(workouts);
-            displayPersonalRecords(workouts);
-            displayPopularExercises(workouts);
+            animateCounter('total-workouts', totalCompletions);
+            animateCounter('total-exercises', stats.total_exercises || 0);
+            animateCounter('current-streak', stats.current_streak || 0);
+            
+            displayCategoryBreakdown(records);
+            displayPopularExercises(records);
         }
     } catch (error) {
         console.error('Error loading progress data:', error);
@@ -409,56 +580,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             '<p style="text-align: center; color: #6b7280; padding: 2rem;">Start tracking workouts to see your progress! 💪</p>';
         document.getElementById('category-breakdown').innerHTML = 
             '<p style="text-align: center; color: #6b7280; padding: 2rem;">No data yet. Complete some workouts!</p>';
-    }
-    
-    function calculateAndDisplayStats(workouts) {
-        // Total workouts completed
-        const completedWorkouts = workouts.filter(w => w.completionCount > 0);
-        const totalCompletions = completedWorkouts.reduce((sum, w) => sum + w.completionCount, 0);
-        
-        // Total exercises
-        const totalExercises = workouts.reduce((sum, w) => sum + w.exercises.length, 0);
-        
-        // Calculate streak
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const completedDates = completedWorkouts
-            .filter(w => w.completedAt)
-            .map(w => {
-                const d = new Date(w.completedAt);
-                d.setHours(0, 0, 0, 0);
-                return d.getTime();
-            })
-            .filter((v, i, a) => a.indexOf(v) === i)
-            .sort((a, b) => b - a);
-        
-        let streak = 0;
-        let checkDate = today.getTime();
-        
-        for (let date of completedDates) {
-            if (date === checkDate || date === checkDate - 86400000) {
-                streak++;
-                checkDate = date - 86400000;
-            } else {
-                break;
-            }
-        }
-        
-        // This week count
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
-        const thisWeekCount = completedWorkouts.filter(w => {
-            if (!w.completedAt) return false;
-            const d = new Date(w.completedAt);
-            return d >= weekStart;
-        }).length;
-        
-        // Animate counters
-        animateCounter('total-workouts', totalCompletions);
-        animateCounter('total-exercises', totalExercises);
-        animateCounter('current-streak', streak);
-        animateCounter('this-week', thisWeekCount);
     }
     
     function animateCounter(id, target) {
@@ -484,7 +605,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        // Get last 14 days (2 weeks) - REDUCED FROM 28
         const days = [];
         for (let i = 13; i >= 0; i--) {
             const date = new Date(today);
@@ -492,15 +612,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             days.push(date);
         }
         
-        // Count workouts per day
-        const workoutsByDay = {};
+        workoutsByDay = {};
         workouts
             .filter(w => w.completedAt)
             .forEach(w => {
                 const date = new Date(w.completedAt);
                 date.setHours(0, 0, 0, 0);
                 const key = date.getTime();
-                workoutsByDay[key] = (workoutsByDay[key] || 0) + 1;
+                if (!workoutsByDay[key]) {
+                    workoutsByDay[key] = [];
+                }
+                workoutsByDay[key].push(w);
             });
         
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -509,13 +631,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="activity-calendar">
                 ${days.map(date => {
                     const key = date.getTime();
-                    const count = workoutsByDay[key] || 0;
+                    const dayWorkouts = workoutsByDay[key] || [];
+                    const count = dayWorkouts.length;
                     const isFuture = date > today;
                     const dayName = dayNames[date.getDay()];
                     const dayNum = date.getDate();
                     
                     return `
                         <div class="activity-day ${count > 0 ? 'has-workout' : ''} ${isFuture ? 'future' : ''}"
+                             onclick="${count > 0 ? `openDayModal(${key})` : ''}"
                              title="${date.toLocaleDateString()}: ${count} workout${count !== 1 ? 's' : ''}">
                             <div class="day-label">${dayName}</div>
                             <div class="day-count">${isFuture ? '' : (count || '·')}</div>
@@ -528,7 +652,50 @@ document.addEventListener('DOMContentLoaded', async function() {
         container.innerHTML = html;
     }
     
-    function displayCategoryBreakdown(workouts) {
+    window.openDayModal = function(dateKey) {
+        const workouts = workoutsByDay[dateKey] || [];
+        if (workouts.length === 0) return;
+        
+        const date = new Date(parseInt(dateKey));
+        document.getElementById('modal-day-title').textContent = 
+            `Workouts on ${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+        
+        const html = workouts.map(workout => {
+            const exerciseList = workout.exercises.map(ex => {
+                let details = '';
+                if (ex.sets) details += `${ex.sets} sets`;
+                if (ex.reps) details += ` × ${ex.reps} reps`;
+                if (ex.weight && ex.weight > 0) details += ` @ ${ex.weight} lbs`;
+                if (ex.duration) details += `${ex.duration} min`;
+                if (ex.distance && ex.distance > 0) details += ` • ${ex.distance} mi`;
+                
+                return `<p>• ${ex.name}: ${details}</p>`;
+            }).join('');
+            
+            return `
+                <div class="workout-detail-item">
+                    <h4>${workout.name}</h4>
+                    ${exerciseList}
+                </div>
+            `;
+        }).join('');
+        
+        document.getElementById('modal-day-content').innerHTML = html;
+        document.getElementById('day-modal').style.display = 'block';
+    }
+    
+    window.closeDayModal = function() {
+        const modal = document.getElementById('day-modal');
+        if (modal.classList.contains('closing')) return;
+        modal.classList.add('closing');
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('closing');
+        }, 300);
+    }
+    
+    function displayCategoryBreakdown(records) {
         const container = document.getElementById('category-breakdown');
         
         const categoryCount = {};
@@ -539,11 +706,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             bodyweight: '🤸'
         };
         
-        workouts.forEach(workout => {
-            workout.exercises.forEach(ex => {
-                const cat = ex.category || 'other';
-                categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-            });
+        exercisesByCategory = {
+            strength: [],
+            cardio: [],
+            flexibility: [],
+            bodyweight: []
+        };
+        
+        records.forEach(record => {
+            const cat = record.category || 'other';
+            categoryCount[cat] = (categoryCount[cat] || 0) + record.times_performed;
+            if (exercisesByCategory[cat]) {
+                exercisesByCategory[cat].push(record);
+            }
         });
         
         const total = Object.values(categoryCount).reduce((sum, count) => sum + count, 0);
@@ -553,6 +728,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         
+        // Find max count for ratio calculation
+        const maxCount = Math.max(...Object.values(categoryCount));
+        
         const sortedCategories = Object.entries(categoryCount)
             .sort((a, b) => b[1] - a[1]);
         
@@ -560,16 +738,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="category-chart">
                 ${sortedCategories.map(([category, count]) => {
                     const percentage = Math.round((count / total) * 100);
+                    const widthRatio = Math.round((count / maxCount) * 100);
                     const icon = categoryIcons[category] || '📊';
                     
                     return `
-                        <div class="category-item">
+                        <div class="category-item" onclick="openCategoryModal('${category}')">
                             <div class="category-label">
                                 <span>${icon}</span>
                                 <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
                             </div>
                             <div class="category-bar-container">
-                                <div class="category-bar ${category}" data-width="${percentage}%">
+                                <div class="category-bar ${category}" data-width="${widthRatio}%">
                                     ${percentage}%
                                 </div>
                             </div>
@@ -582,7 +761,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         container.innerHTML = html;
         
-        // Animate bars
         setTimeout(() => {
             document.querySelectorAll('.category-bar').forEach(bar => {
                 bar.style.width = bar.dataset.width;
@@ -590,116 +768,99 @@ document.addEventListener('DOMContentLoaded', async function() {
         }, 100);
     }
     
-    function displayPersonalRecords(workouts) {
-        const container = document.getElementById('personal-records');
+    window.openCategoryModal = function(category) {
+        const exercises = exercisesByCategory[category] || [];
+        if (exercises.length === 0) return;
         
-        let maxWeight = 0;
-        let maxWeightExercise = '';
-        let longestDuration = 0;
-        let longestDurationExercise = '';
-        let mostSets = 0;
-        let mostSetsExercise = '';
-        let longestDistance = 0;
-        let longestDistanceExercise = '';
+        const categoryIcons = {
+            strength: '💪',
+            cardio: '🏃',
+            flexibility: '🧘',
+            bodyweight: '🤸'
+        };
         
-        workouts.forEach(workout => {
-            workout.exercises.forEach(ex => {
-                if (ex.weight && parseFloat(ex.weight) > maxWeight) {
-                    maxWeight = parseFloat(ex.weight);
-                    maxWeightExercise = ex.name;
+        document.getElementById('modal-category-title').textContent = 
+            `${categoryIcons[category] || ''} ${category.charAt(0).toUpperCase() + category.slice(1)} Exercises`;
+        
+        const html = exercises.map(ex => {
+            let details = [];
+            
+            if (category === 'strength') {
+                if (ex.max_weight && ex.max_weight > 0) {
+                    details.push(`Max Weight: ${ex.max_weight} lbs`);
                 }
-                if (ex.duration && parseFloat(ex.duration) > longestDuration) {
-                    longestDuration = parseFloat(ex.duration);
-                    longestDurationExercise = ex.name;
+                if (ex.max_reps && ex.max_reps > 0) {
+                    details.push(`Best Reps: ${ex.max_reps}`);
                 }
-                if (ex.sets && parseInt(ex.sets) > mostSets) {
-                    mostSets = parseInt(ex.sets);
-                    mostSetsExercise = ex.name;
+                if (ex.max_sets && ex.max_sets > 0) {
+                    details.push(`Most Sets: ${ex.max_sets}`);
                 }
-                if (ex.distance && parseFloat(ex.distance) > longestDistance) {
-                    longestDistance = parseFloat(ex.distance);
-                    longestDistanceExercise = ex.name;
+            } else if (category === 'cardio') {
+                if (ex.longest_duration && ex.longest_duration > 0) {
+                    details.push(`Longest: ${ex.longest_duration} min`);
                 }
-            });
-        });
-        
-        const records = [];
-        
-        if (maxWeight > 0) {
-            records.push({
-                title: 'Heaviest Weight',
-                value: `${maxWeight} lbs`,
-                detail: maxWeightExercise
-            });
-        }
-        
-        if (longestDuration > 0) {
-            records.push({
-                title: 'Longest Duration',
-                value: `${longestDuration} min`,
-                detail: longestDurationExercise
-            });
-        }
-        
-        if (mostSets > 0) {
-            records.push({
-                title: 'Most Sets',
-                value: mostSets,
-                detail: mostSetsExercise
-            });
-        }
-        
-        if (longestDistance > 0) {
-            records.push({
-                title: 'Longest Distance',
-                value: `${longestDistance} mi`,
-                detail: longestDistanceExercise
-            });
-        }
-        
-        if (records.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">Complete workouts with metrics to see your records!</p>';
-            return;
-        }
-        
-        const html = `
-            <div class="records-grid">
-                ${records.map(record => `
-                    <div class="record-item">
-                        <h4>${record.title}</h4>
-                        <div class="record-value">${record.value}</div>
-                        <div class="record-detail">${record.detail}</div>
+                if (ex.longest_distance && ex.longest_distance > 0) {
+                    details.push(`Farthest: ${ex.longest_distance} mi`);
+                }
+            } else if (category === 'flexibility') {
+                if (ex.longest_duration && ex.longest_duration > 0) {
+                    details.push(`Longest: ${ex.longest_duration} min`);
+                }
+            } else if (category === 'bodyweight') {
+                if (ex.max_reps && ex.max_reps > 0) {
+                    details.push(`Best Reps: ${ex.max_reps}`);
+                }
+                if (ex.max_sets && ex.max_sets > 0) {
+                    details.push(`Most Sets: ${ex.max_sets}`);
+                }
+                if (ex.longest_duration && ex.longest_duration > 0) {
+                    details.push(`Longest: ${ex.longest_duration} min`);
+                }
+            }
+            
+            return `
+                <div class="exercise-detail-item">
+                    <div class="exercise-detail-info">
+                        <h4>${ex.exercise_name}</h4>
+                        ${details.length > 0 ? `<small style="color: var(--primary);">${details.join(' • ')}</small>` : '<small style="color: #6b7280;">No records yet</small>'}
                     </div>
-                `).join('')}
-            </div>
-        `;
+                    <div class="exercise-detail-stats">
+                        ${ex.times_performed}×
+                    </div>
+                </div>
+            `;
+        }).join('');
         
-        container.innerHTML = html;
+        document.getElementById('modal-category-content').innerHTML = html;
+        document.getElementById('category-modal').style.display = 'block';
     }
     
-    function displayPopularExercises(workouts) {
+    window.closeCategoryModal = function() {
+        const modal = document.getElementById('category-modal');
+        if (modal.classList.contains('closing')) return;
+        modal.classList.add('closing');
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('closing');
+        }, 300);
+    }
+    
+    function displayPopularExercises(records) {
         const container = document.getElementById('popular-exercises');
         
-        const exerciseCount = {};
-        
-        workouts.forEach(workout => {
-            workout.exercises.forEach(ex => {
-                exerciseCount[ex.name] = (exerciseCount[ex.name] || 0) + 1;
-            });
-        });
-        
-        const sorted = Object.entries(exerciseCount)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-        
-        if (sorted.length === 0) {
+        if (records.length === 0) {
             container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No exercises yet!</p>';
             return;
         }
         
+        const sorted = records
+            .sort((a, b) => b.times_performed - a.times_performed)
+            .slice(0, 5);
+        
         const html = `
             <div class="exercise-list">
-                ${sorted.map(([name, count], index) => {
+                ${sorted.map((record, index) => {
                     let badgeClass = 'other';
                     if (index === 0) badgeClass = 'gold';
                     else if (index === 1) badgeClass = 'silver';
@@ -709,10 +870,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <div class="exercise-rank-item">
                             <div class="rank-badge ${badgeClass}">${index + 1}</div>
                             <div class="exercise-rank-info">
-                                <strong>${name}</strong>
-                                <small>Performed ${count} time${count !== 1 ? 's' : ''}</small>
+                                <strong>${record.exercise_name}</strong>
                             </div>
-                            <div class="exercise-rank-count">${count}</div>
+                            <div class="exercise-rank-count">${record.times_performed}</div>
                         </div>
                     `;
                 }).join('')}
@@ -720,6 +880,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
         
         container.innerHTML = html;
+    }
+    
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            if (event.target.classList.contains('closing')) return;
+            event.target.classList.add('closing');
+            
+            setTimeout(() => {
+                event.target.style.display = 'none';
+                event.target.classList.remove('closing');
+            }, 300);
+        }
     }
 });
 </script>
