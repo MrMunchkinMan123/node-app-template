@@ -250,24 +250,58 @@ async function updateUserProgressStats(userId) {
 
         let currentStreak = 0;
         let longestStreak = 0;
-        let tempStreak = 0;
+        let tempStreak = 1;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        for (let i = 0; i < completedDates.length; i++) {
-            const date = new Date(completedDates[i].workout_date);
-            const expectedDate = new Date(today);
-            expectedDate.setDate(today.getDate() - i);
-            expectedDate.setHours(0, 0, 0, 0);
-
-            if (date.getTime() === expectedDate.getTime()) {
-                currentStreak++;
-                tempStreak++;
-            } else {
-                tempStreak = 1;
+        if (completedDates.length > 0) {
+            const lastWorkout = new Date(completedDates[0].workout_date);
+            lastWorkout.setHours(0, 0, 0, 0);
+            
+            // Check if last workout was today or yesterday
+            const daysSinceLastWorkout = Math.floor((today - lastWorkout) / (1000 * 60 * 60 * 24));
+            
+            if (daysSinceLastWorkout <= 1) {
+                // Start counting streak
+                currentStreak = 1;
+                
+                for (let i = 1; i < completedDates.length; i++) {
+                    const currentDate = new Date(completedDates[i].workout_date);
+                    const previousDate = new Date(completedDates[i - 1].workout_date);
+                    currentDate.setHours(0, 0, 0, 0);
+                    previousDate.setHours(0, 0, 0, 0);
+                    
+                    const dayDiff = Math.floor((previousDate - currentDate) / (1000 * 60 * 60 * 24));
+                    
+                    if (dayDiff === 1) {
+                        currentStreak++;
+                    } else {
+                        break;
+                    }
+                }
             }
-            longestStreak = Math.max(longestStreak, tempStreak);
+            
+            // Calculate longest streak
+            tempStreak = 1;
+            longestStreak = 1;
+            
+            for (let i = 1; i < completedDates.length; i++) {
+                const currentDate = new Date(completedDates[i].workout_date);
+                const previousDate = new Date(completedDates[i - 1].workout_date);
+                currentDate.setHours(0, 0, 0, 0);
+                previousDate.setHours(0, 0, 0, 0);
+                
+                const dayDiff = Math.floor((previousDate - currentDate) / (1000 * 60 * 60 * 24));
+                
+                if (dayDiff === 1) {
+                    tempStreak++;
+                    longestStreak = Math.max(longestStreak, tempStreak);
+                } else {
+                    tempStreak = 1;
+                }
+            }
         }
+
 
         // This week and month counts
         const [weekStats] = await pool.execute(
