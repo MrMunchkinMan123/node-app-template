@@ -1,6 +1,7 @@
 USE cis440fall2025team5;
 
 -- Drop all existing tables in correct order
+DROP TABLE IF EXISTS workout_completions;
 DROP TABLE IF EXISTS exercise_personal_records;
 DROP TABLE IF EXISTS exercise_history;
 DROP TABLE IF EXISTS user_progress_stats;
@@ -61,13 +62,26 @@ CREATE TABLE workouts (
     INDEX idx_session (workout_session_id)
 );
 
--- NEW: Individual exercise history (every time an exercise is performed)
+-- NEW: Workout completions (permanent history, never deleted)
+CREATE TABLE workout_completions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    workout_session_id INT NULL,
+    workout_name VARCHAR(255) NOT NULL,
+    completed_at DATETIME NOT NULL,
+    exercises_data JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (workout_session_id) REFERENCES workout_sessions(id) ON DELETE SET NULL,
+    INDEX idx_user_completed (user_id, completed_at)
+);
+
+-- Individual exercise history (every time an exercise is performed)
 CREATE TABLE exercise_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     workout_session_id INT DEFAULT NULL,
     exercise_name VARCHAR(255) NOT NULL,
-    exercise_type VARCHAR(50) NOT NULL,
     category VARCHAR(50) NOT NULL,
     sets INT DEFAULT NULL,
     reps INT DEFAULT NULL,
@@ -75,16 +89,16 @@ CREATE TABLE exercise_history (
     duration INT DEFAULT NULL,
     distance DECIMAL(6,2) DEFAULT NULL,
     notes TEXT DEFAULT NULL,
-    performed_at DATETIME NOT NULL,
+    completed_at DATETIME NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
     FOREIGN KEY (workout_session_id) REFERENCES workout_sessions(id) ON DELETE SET NULL,
     INDEX idx_user_exercise (user_id, exercise_name),
-    INDEX idx_performed_at (performed_at),
+    INDEX idx_completed_at (completed_at),
     INDEX idx_category (category)
 );
 
--- NEW: Personal records for each exercise (tracks best performance per exercise)
+-- Personal records for each exercise (tracks best performance per exercise)
 CREATE TABLE exercise_personal_records (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,

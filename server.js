@@ -50,125 +50,6 @@ const pool = mysql.createPool({
 // HELPER FUNCTIONS FOR TRACKING
 //////////////////////////////////////
 
-// Update exercise history (log every exercise performed)
-async function logExerciseHistory(userId, workoutSessionId, exercises, performedAt) {
-    try {
-        for (const exercise of exercises) {
-            await pool.execute(
-                `INSERT INTO exercise_history 
-                (user_id, workout_session_id, exercise_name, exercise_type, category, 
-                 sets, reps, weight, duration, distance, performed_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    userId,
-                    workoutSessionId,
-                    exercise.name,
-                    exercise.type,
-                    exercise.category,
-                    exercise.sets || null,
-                    exercise.reps || null,
-                    exercise.weight || null,
-                    exercise.duration || null,
-                    exercise.distance || null,
-                    performedAt
-                ]
-            );
-        }
-    } catch (error) {
-        console.error('Error logging exercise history:', error);
-    }
-}
-
-// Update personal records for each exercise
-async function updatePersonalRecords(userId, exercises, performedAt) {
-    try {
-        for (const exercise of exercises) {
-            // Check if record exists
-            const [existing] = await pool.execute(
-                'SELECT * FROM exercise_personal_records WHERE user_id = ? AND exercise_name = ?',
-                [userId, exercise.name]
-            );
-
-            const weight = parseFloat(exercise.weight) || 0;
-            const reps = parseInt(exercise.reps) || 0;
-            const sets = parseInt(exercise.sets) || 0;
-            const duration = parseInt(exercise.duration) || 0;
-            const distance = parseFloat(exercise.distance) || 0;
-
-            if (existing.length === 0) {
-                // Create new record
-                await pool.execute(
-                    `INSERT INTO exercise_personal_records 
-                    (user_id, exercise_name, category, times_performed, last_performed,
-                     max_weight, max_weight_date, max_reps, max_reps_date, 
-                     max_sets, max_sets_date, longest_duration, longest_duration_date,
-                     longest_distance, longest_distance_date,
-                     total_weight_lifted, total_reps, total_sets, total_duration, total_distance,
-                     avg_weight, avg_reps)
-                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        userId, exercise.name, exercise.category, performedAt,
-                        weight > 0 ? weight : null, weight > 0 ? performedAt : null,
-                        reps > 0 ? reps : null, reps > 0 ? performedAt : null,
-                        sets > 0 ? sets : null, sets > 0 ? performedAt : null,
-                        duration > 0 ? duration : null, duration > 0 ? performedAt : null,
-                        distance > 0 ? distance : null, distance > 0 ? performedAt : null,
-                        weight * sets * reps, reps * sets, sets, duration, distance,
-                        weight > 0 ? weight : null, reps > 0 ? reps : null
-                    ]
-                );
-            } else {
-                // Update existing record
-                const record = existing[0];
-                const newTimesPerformed = record.times_performed + 1;
-                const newTotalWeight = record.total_weight_lifted + (weight * sets * reps);
-                const newTotalReps = record.total_reps + (reps * sets);
-                const newTotalSets = record.total_sets + sets;
-                const newTotalDuration = record.total_duration + duration;
-                const newTotalDistance = record.total_distance + distance;
-
-                await pool.execute(
-                    `UPDATE exercise_personal_records SET
-                        times_performed = ?,
-                        last_performed = ?,
-                        max_weight = GREATEST(COALESCE(max_weight, 0), ?),
-                        max_weight_date = IF(? > COALESCE(max_weight, 0), ?, max_weight_date),
-                        max_reps = GREATEST(COALESCE(max_reps, 0), ?),
-                        max_reps_date = IF(? > COALESCE(max_reps, 0), ?, max_reps_date),
-                        max_sets = GREATEST(COALESCE(max_sets, 0), ?),
-                        max_sets_date = IF(? > COALESCE(max_sets, 0), ?, max_sets_date),
-                        longest_duration = GREATEST(COALESCE(longest_duration, 0), ?),
-                        longest_duration_date = IF(? > COALESCE(longest_duration, 0), ?, longest_duration_date),
-                        longest_distance = GREATEST(COALESCE(longest_distance, 0), ?),
-                        longest_distance_date = IF(? > COALESCE(longest_distance, 0), ?, longest_distance_date),
-                        total_weight_lifted = ?,
-                        total_reps = ?,
-                        total_sets = ?,
-                        total_duration = ?,
-                        total_distance = ?,
-                        avg_weight = ? / ?,
-                        avg_reps = ? / ?
-                    WHERE user_id = ? AND exercise_name = ?`,
-                    [
-                        newTimesPerformed, performedAt,
-                        weight, weight, performedAt,
-                        reps, reps, performedAt,
-                        sets, sets, performedAt,
-                        duration, duration, performedAt,
-                        distance, distance, performedAt,
-                        newTotalWeight, newTotalReps, newTotalSets, newTotalDuration, newTotalDistance,
-                        newTotalWeight, newTimesPerformed,
-                        newTotalReps, newTimesPerformed,
-                        userId, exercise.name
-                    ]
-                );
-            }
-        }
-    } catch (error) {
-        console.error('Error updating personal records:', error);
-    }
-}
-
 // Calculate and update user progress stats
 async function updateUserProgressStats(userId) {
     try {
@@ -178,14 +59,14 @@ async function updateUserProgressStats(userId) {
             [userId]
         );
 
-        // Get total workouts completed
+        // Get total workouts completed from workout_completions
         const [workoutStats] = await pool.execute(
             `SELECT 
-                COUNT(DISTINCT id) as total_workouts,
+                COUNT(*) as total_workouts,
                 MIN(completed_at) as first_workout,
                 MAX(completed_at) as last_workout
-            FROM workout_sessions 
-            WHERE user_id = ? AND completed_at IS NOT NULL`,
+            FROM workout_completions 
+            WHERE user_id = ?`,
             [userId]
         );
 
@@ -239,11 +120,11 @@ async function updateUserProgressStats(userId) {
             [userId]
         );
 
-        // Calculate streak
+        // Calculate streak from workout_completions
         const [completedDates] = await pool.execute(
             `SELECT DISTINCT DATE(completed_at) as workout_date
-            FROM workout_sessions
-            WHERE user_id = ? AND completed_at IS NOT NULL
+            FROM workout_completions
+            WHERE user_id = ? 
             ORDER BY workout_date DESC`,
             [userId]
         );
@@ -302,25 +183,22 @@ async function updateUserProgressStats(userId) {
             }
         }
 
-
         // This week and month counts
         const [weekStats] = await pool.execute(
             `SELECT 
                 COUNT(*) as this_week
-            FROM workout_sessions
+            FROM workout_completions
             WHERE user_id = ? 
-            AND completed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-            AND completed_at IS NOT NULL`,
+            AND completed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
             [userId]
         );
 
         const [monthStats] = await pool.execute(
             `SELECT 
                 COUNT(*) as this_month
-            FROM workout_sessions
+            FROM workout_completions
             WHERE user_id = ? 
-            AND completed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            AND completed_at IS NOT NULL`,
+            AND completed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
             [userId]
         );
 
@@ -398,7 +276,6 @@ async function updateUserProgressStats(userId) {
 //////////////////////////////////////
 //ROUTES TO SERVE HTML FILES
 //////////////////////////////////////
-// Default route to serve logon.html
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/public/logon.html');
 });
@@ -426,10 +303,6 @@ app.get('/achievements', (req, res) => {
 app.get('/profile', (req, res) => {
     res.render('profile', { title: 'Profile - FitTracker' });
 });
-
-//////////////////////////////////////
-//END ROUTES TO SERVE HTML FILES
-//////////////////////////////////////
 
 /////////////////////////////////////////////////
 //AUTHENTICATION MIDDLEWARE
@@ -464,13 +337,11 @@ async function authenticateToken(req, res, next) {
         }
     });
 }
-/////////////////////////////////////////////////
-//END AUTHENTICATION MIDDLEWARE
-/////////////////////////////////////////////////
 
 //////////////////////////////////////
 //ROUTES TO HANDLE API REQUESTS
 //////////////////////////////////////
+
 // Route: Create Account
 app.post('/api/create-account', async (req, res) => {
     const { name, email, password } = req.body;
@@ -682,7 +553,43 @@ app.get('/api/workouts', authenticateToken, async (req, res) => {
     }
 });
 
-// Mark a workout as completed (NOW WITH TRACKING!)
+// Get workout completions for calendar and stats
+app.get('/api/workouts/completions', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const userId = userRows[0].id;
+
+        const [completions] = await pool.execute(
+            `SELECT id, workout_name as name, completed_at as completedAt, exercises_data as exercises
+            FROM workout_completions 
+            WHERE user_id = ? 
+            ORDER BY completed_at DESC`,
+            [userId]
+        );
+
+        // Parse exercises JSON
+        completions.forEach(c => {
+            c.exercises = JSON.parse(c.exercises);
+        });
+
+        res.json(completions);
+    } catch (error) {
+        console.error('Error fetching completions:', error);
+        res.status(500).json({ message: 'Error fetching completions.' });
+    }
+});
+
+// Mark workout as complete
 app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
     const workoutId = req.params.id;
     const userEmail = req.user.email;
@@ -699,39 +606,96 @@ app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
 
         const userId = userRows[0].id;
 
-        // Get workout exercises
-        const [exercises] = await pool.execute(
-            `SELECT exercise_name as name, exercise_type as type, category, 
-                    sets, reps, weight, duration, distance
-            FROM workouts WHERE workout_session_id = ?`,
-            [workoutId]
+        // Get workout details with exercises
+        const [sessionRows] = await pool.execute(
+            'SELECT workout_name, workout_date FROM workout_sessions WHERE id = ? AND user_id = ?',
+            [workoutId, userId]
         );
 
-        const performedAt = new Date();
-
-        // Update workout session
-        const [result] = await pool.execute(
-            `UPDATE workout_sessions 
-             SET completed_at = ?, 
-                 completion_count = completion_count + 1 
-             WHERE id = ? AND user_id = ?`,
-            [performedAt, workoutId, userId]
-        );
-
-        if (result.affectedRows === 0) {
+        if (sessionRows.length === 0) {
             return res.status(404).json({ message: 'Workout not found.' });
         }
 
-        // Log to exercise history
-        await logExerciseHistory(userId, workoutId, exercises, performedAt);
+        const workout = sessionRows[0];
 
-        // Update personal records
-        await updatePersonalRecords(userId, exercises, performedAt);
+        // Get all exercises for this workout
+        const [exerciseRows] = await pool.execute(
+            'SELECT * FROM workouts WHERE workout_session_id = ?',
+            [workoutId]
+        );
 
-        // Update overall user stats
+        const completedAt = new Date();
+
+        // Convert exercises to JSON format
+        const exercisesData = exerciseRows.map(ex => ({
+            name: ex.exercise_name,
+            type: ex.exercise_type,
+            category: ex.category,
+            sets: ex.sets,
+            reps: ex.reps,
+            weight: ex.weight,
+            duration: ex.duration,
+            distance: ex.distance
+        }));
+
+        // Insert into workout_completions table (permanent record)
+        await pool.execute(
+            'INSERT INTO workout_completions (user_id, workout_session_id, workout_name, completed_at, exercises_data) VALUES (?, ?, ?, ?, ?)',
+            [userId, workoutId, workout.workout_name, completedAt, JSON.stringify(exercisesData)]
+        );
+
+        // Update the workout_sessions with latest completion
+        await pool.execute(
+            'UPDATE workout_sessions SET completed_at = ?, completion_count = completion_count + 1 WHERE id = ?',
+            [completedAt, workoutId]
+        );
+
+        // Record in exercise_history
+        for (const exercise of exercisesData) {
+            await pool.execute(
+                `INSERT INTO exercise_history 
+                (user_id, workout_session_id, exercise_name, category, sets, reps, weight, duration, distance, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    userId,
+                    workoutId,
+                    exercise.name,
+                    exercise.category,
+                    exercise.sets || null,
+                    exercise.reps || null,
+                    exercise.weight || null,
+                    exercise.duration || null,
+                    exercise.distance || null,
+                    completedAt
+                ]
+            );
+
+            // Update personal records
+            await pool.execute(
+                `INSERT INTO exercise_personal_records 
+                (user_id, exercise_name, category, max_weight, max_reps, max_sets, longest_duration, longest_distance, times_performed)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ON DUPLICATE KEY UPDATE
+                    max_weight = GREATEST(COALESCE(max_weight, 0), COALESCE(?, 0)),
+                    max_reps = GREATEST(COALESCE(max_reps, 0), COALESCE(?, 0)),
+                    max_sets = GREATEST(COALESCE(max_sets, 0), COALESCE(?, 0)),
+                    longest_duration = GREATEST(COALESCE(longest_duration, 0), COALESCE(?, 0)),
+                    longest_distance = GREATEST(COALESCE(longest_distance, 0), COALESCE(?, 0)),
+                    times_performed = times_performed + 1`,
+                [
+                    userId, exercise.name, exercise.category,
+                    exercise.weight || null, exercise.reps || null, exercise.sets || null,
+                    exercise.duration || null, exercise.distance || null,
+                    exercise.weight || null, exercise.reps || null, exercise.sets || null,
+                    exercise.duration || null, exercise.distance || null
+                ]
+            );
+        }
+
+        // Update user progress stats
         await updateUserProgressStats(userId);
 
-        res.status(200).json({ message: 'Workout marked as complete!' });
+        res.status(200).json({ message: 'Workout completed!' });
     } catch (error) {
         console.error('Error completing workout:', error);
         res.status(500).json({ message: 'Error completing workout.' });
@@ -755,6 +719,13 @@ app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
 
         const userId = userRows[0].id;
 
+        // Delete the exercises from workouts table
+        await pool.execute(
+            'DELETE FROM workouts WHERE workout_session_id = ?',
+            [workoutId]
+        );
+        
+        // Delete the workout session (completions are preserved via SET NULL)
         const [result] = await pool.execute(
             'DELETE FROM workout_sessions WHERE id = ? AND user_id = ?',
             [workoutId, userId]
@@ -764,9 +735,6 @@ app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ message: 'Workout not found.' });
         }
 
-        // Recalculate stats after deletion
-        await updateUserProgressStats(userId);
-
         res.status(200).json({ message: 'Workout deleted successfully!' });
     } catch (error) {
         console.error('Error deleting workout:', error);
@@ -774,7 +742,7 @@ app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// NEW: Get user progress stats
+// Get user progress stats
 app.get('/api/progress/stats', authenticateToken, async (req, res) => {
     const userEmail = req.user.email;
 
@@ -810,7 +778,7 @@ app.get('/api/progress/stats', authenticateToken, async (req, res) => {
     }
 });
 
-// NEW: Get personal records
+// Get personal records
 app.get('/api/progress/records', authenticateToken, async (req, res) => {
     const userEmail = req.user.email;
 
@@ -837,10 +805,6 @@ app.get('/api/progress/records', authenticateToken, async (req, res) => {
         res.status(500).json({ message: 'Error loading personal records.' });
     }
 });
-
-//////////////////////////////////////
-//END ROUTES TO HANDLE API REQUESTS
-//////////////////////////////////////
 
 // Start the server
 app.listen(port, () => {

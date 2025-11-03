@@ -551,16 +551,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             const stats = await statsResponse.json();
             const records = await recordsResponse.json();
             
-            const workoutsResponse = await fetch('/api/workouts', {
+            // CHANGED: Get workout completions instead of workout templates
+            const completionsResponse = await fetch('/api/workouts/completions', {
                 headers: { 'Authorization': token }
             });
             
             let totalCompletions = 0;
-            if (workoutsResponse.ok) {
-                const workouts = await workoutsResponse.json();
-                totalCompletions = workouts.reduce((sum, w) => sum + (w.completionCount || 0), 0);
+            if (completionsResponse.ok) {
+                const completions = await completionsResponse.json();
+                totalCompletions = completions.length; // CHANGED: Count completions directly
                 
-                displayActivityCalendar(workouts);
+                displayActivityCalendar(completions); // CHANGED: Pass completions
             }
             
             animateCounter('total-workouts', totalCompletions);
@@ -600,7 +601,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }, stepTime);
     }
     
-    function displayActivityCalendar(workouts) {
+    function displayActivityCalendar(completions) { // CHANGED: Parameter name
         const container = document.getElementById('activity-calendar');
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -613,8 +614,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         workoutsByDay = {};
-        workouts
-            .filter(w => w.completedAt)
+        completions // CHANGED: Use completions
             .forEach(w => {
                 const date = new Date(w.completedAt);
                 date.setHours(0, 0, 0, 0);
@@ -728,7 +728,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         
-        // Find max count for ratio calculation
         const maxCount = Math.max(...Object.values(categoryCount));
         
         const sortedCategories = Object.entries(categoryCount)
