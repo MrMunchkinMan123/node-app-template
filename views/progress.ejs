@@ -539,29 +539,40 @@ document.addEventListener('DOMContentLoaded', async function() {
     let exercisesByCategory = {};
     
     try {
-        const statsResponse = await fetch('/api/progress/stats', {
-            headers: { 'Authorization': token }
+        // Add cache-busting timestamp
+        const timestamp = Date.now();
+        
+        const statsResponse = await fetch(`/api/progress/stats?t=${timestamp}`, {
+            headers: { 
+                'Authorization': token,
+                'Cache-Control': 'no-cache'
+            }
         });
         
-        const recordsResponse = await fetch('/api/progress/records', {
-            headers: { 'Authorization': token }
+        const recordsResponse = await fetch(`/api/progress/records?t=${timestamp}`, {
+            headers: { 
+                'Authorization': token,
+                'Cache-Control': 'no-cache'
+            }
         });
         
         if (statsResponse.ok && recordsResponse.ok) {
             const stats = await statsResponse.json();
             const records = await recordsResponse.json();
             
-            // CHANGED: Get workout completions instead of workout templates
-            const completionsResponse = await fetch('/api/workouts/completions', {
-                headers: { 'Authorization': token }
+            const completionsResponse = await fetch(`/api/workouts/completions?t=${timestamp}`, {
+                headers: { 
+                    'Authorization': token,
+                    'Cache-Control': 'no-cache'
+                }
             });
             
             let totalCompletions = 0;
             if (completionsResponse.ok) {
                 const completions = await completionsResponse.json();
-                totalCompletions = completions.length; // CHANGED: Count completions directly
+                totalCompletions = completions.length;
                 
-                displayActivityCalendar(completions); // CHANGED: Pass completions
+                displayActivityCalendar(completions);
             }
             
             animateCounter('total-workouts', totalCompletions);
@@ -601,7 +612,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }, stepTime);
     }
     
-    function displayActivityCalendar(completions) { // CHANGED: Parameter name
+    function displayActivityCalendar(completions) {
         const container = document.getElementById('activity-calendar');
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -614,16 +625,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         workoutsByDay = {};
-        completions // CHANGED: Use completions
-            .forEach(w => {
-                const date = new Date(w.completedAt);
-                date.setHours(0, 0, 0, 0);
-                const key = date.getTime();
-                if (!workoutsByDay[key]) {
-                    workoutsByDay[key] = [];
-                }
-                workoutsByDay[key].push(w);
-            });
+        completions.forEach(w => {
+            const date = new Date(w.completedAt);
+            date.setHours(0, 0, 0, 0);
+            const key = date.getTime();
+            if (!workoutsByDay[key]) {
+                workoutsByDay[key] = [];
+            }
+            workoutsByDay[key].push(w);
+        });
         
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         
@@ -635,7 +645,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const count = dayWorkouts.length;
                     const isFuture = date > today;
                     const dayName = dayNames[date.getDay()];
-                    const dayNum = date.getDate();
                     
                     return `
                         <div class="activity-day ${count > 0 ? 'has-workout' : ''} ${isFuture ? 'future' : ''}"
@@ -894,3 +903,4 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 </script>
+

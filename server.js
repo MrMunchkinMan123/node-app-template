@@ -268,6 +268,8 @@ async function updateUserProgressStats(userId) {
                 ]
             );
         }
+         await new Promise(resolve => setTimeout(resolve, 100));
+
     } catch (error) {
         console.error('Error updating user progress stats:', error);
     }
@@ -747,6 +749,11 @@ app.get('/api/progress/stats', authenticateToken, async (req, res) => {
     const userEmail = req.user.email;
 
     try {
+        // Add no-cache headers
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
         const [userRows] = await pool.execute(
             'SELECT id FROM user WHERE email = ?',
             [userEmail]
