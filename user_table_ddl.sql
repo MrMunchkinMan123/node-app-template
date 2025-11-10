@@ -1,6 +1,8 @@
 USE cis440fall2025team5;
 
 -- Drop all existing tables in correct order
+DROP TABLE IF EXISTS user_achievements;
+DROP TABLE IF EXISTS achievements;
 DROP TABLE IF EXISTS workout_completions;
 DROP TABLE IF EXISTS exercise_personal_records;
 DROP TABLE IF EXISTS exercise_history;
@@ -62,7 +64,7 @@ CREATE TABLE workouts (
     INDEX idx_session (workout_session_id)
 );
 
--- NEW: Workout completions (permanent history, never deleted)
+-- Workout completions (permanent history, never deleted)
 CREATE TABLE workout_completions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -172,11 +174,11 @@ CREATE TABLE achievements (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    icon VARCHAR(10) NOT NULL,
+    icon VARCHAR(50) NOT NULL,
     category ENUM('workout', 'streak', 'exercise', 'weight', 'distance', 'time', 'social', 'milestone') NOT NULL,
     requirement_type ENUM('count', 'streak', 'total', 'single', 'variety') NOT NULL,
     requirement_value INT NOT NULL,
-    rarity ENUM('common', 'rare', 'epic', 'legendary') NOT NULL DEFAULT 'common',
+    rarity ENUM('onetime', 'weekly', 'monthly') NOT NULL DEFAULT 'onetime',
     points INT NOT NULL DEFAULT 10,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -196,49 +198,52 @@ CREATE TABLE user_achievements (
     INDEX idx_unlocked (unlocked_at)
 );
 
--- Insert predefined achievements
+-- Insert predefined achievements (using text codes for emojis)
 INSERT INTO achievements (name, description, icon, category, requirement_type, requirement_value, rarity, points) VALUES
--- Workout Milestones
-('First Steps', 'Complete your first workout', '🎯', 'workout', 'count', 1, 'common', 10),
-('Getting Started', 'Complete 5 workouts', '💪', 'workout', 'count', 5, 'common', 25),
-('Consistency', 'Complete 10 workouts', '🔥', 'workout', 'count', 10, 'common', 50),
-('Dedicated', 'Complete 25 workouts', '⭐', 'workout', 'count', 25, 'rare', 100),
-('Warrior', 'Complete 50 workouts', '🏆', 'workout', 'count', 50, 'rare', 250),
-('Champion', 'Complete 100 workouts', '👑', 'workout', 'count', 100, 'epic', 500),
-('Legend', 'Complete 250 workouts', '💎', 'workout', 'count', 250, 'legendary', 1000),
+-- One-Time Workout Milestones
+('First Steps', 'Complete your first workout', '[TARGET]', 'workout', 'count', 1, 'onetime', 10),
+('Getting Started', 'Complete 5 workouts', '[MUSCLE]', 'workout', 'count', 5, 'onetime', 25),
+('Consistency', 'Complete 10 workouts', '[FIRE]', 'workout', 'count', 10, 'onetime', 50),
+('Dedicated', 'Complete 25 workouts', '[STAR]', 'workout', 'count', 25, 'onetime', 100),
+('Warrior', 'Complete 50 workouts', '[TROPHY]', 'workout', 'count', 50, 'onetime', 250),
+('Champion', 'Complete 100 workouts', '[CROWN]', 'workout', 'count', 100, 'onetime', 500),
+('Legend', 'Complete 250 workouts', '[GEM]', 'workout', 'count', 250, 'onetime', 1000),
 
 -- Streak Achievements
-('On Fire', 'Maintain a 3-day streak', '🔥', 'streak', 'streak', 3, 'common', 30),
-('Unstoppable', 'Maintain a 7-day streak', '⚡', 'streak', 'streak', 7, 'rare', 100),
-('Iron Will', 'Maintain a 14-day streak', '🛡️', 'streak', 'streak', 14, 'rare', 200),
-('Legendary Streak', 'Maintain a 30-day streak', '🌟', 'streak', 'streak', 30, 'epic', 500),
-('Year Warrior', 'Maintain a 365-day streak', '🎖️', 'streak', 'streak', 365, 'legendary', 2000),
+('On Fire', 'Maintain a 3-day streak', '[FIRE]', 'streak', 'streak', 3, 'onetime', 30),
+('Unstoppable', 'Maintain a 7-day streak', '[BOLT]', 'streak', 'streak', 7, 'onetime', 100),
+('Iron Will', 'Maintain a 14-day streak', '[SHIELD]', 'streak', 'streak', 14, 'onetime', 200),
+('Legendary Streak', 'Maintain a 30-day streak', '[STARS]', 'streak', 'streak', 30, 'onetime', 500),
 
 -- Exercise Variety
-('Explorer', 'Try 5 different exercises', '🗺️', 'exercise', 'variety', 5, 'common', 20),
-('Versatile', 'Try 10 different exercises', '🎨', 'exercise', 'variety', 10, 'common', 50),
-('Well-Rounded', 'Try 20 different exercises', '🌈', 'exercise', 'variety', 20, 'rare', 100),
+('Explorer', 'Try 5 different exercises', '[MAP]', 'exercise', 'variety', 5, 'onetime', 20),
+('Versatile', 'Try 10 different exercises', '[PAINT]', 'exercise', 'variety', 10, 'onetime', 50),
+('Well-Rounded', 'Try 20 different exercises', '[RAINBOW]', 'exercise', 'variety', 20, 'onetime', 100),
 
 -- Strength Milestones
-('Lightweight', 'Lift a total of 1,000 lbs', '🏋️', 'weight', 'total', 1000, 'common', 50),
-('Heavyweight', 'Lift a total of 10,000 lbs', '💪', 'weight', 'total', 10000, 'rare', 200),
-('Powerhouse', 'Lift a total of 50,000 lbs', '⚡', 'weight', 'total', 50000, 'epic', 500),
+('Lightweight', 'Lift a total of 1,000 lbs', '[WEIGHT]', 'weight', 'total', 1000, 'onetime', 50),
+('Heavyweight', 'Lift a total of 10,000 lbs', '[POWER]', 'weight', 'total', 10000, 'onetime', 200),
+('Powerhouse', 'Lift a total of 50,000 lbs', '[FLASH]', 'weight', 'total', 50000, 'onetime', 500),
 
 -- Cardio Milestones
-('First Mile', 'Run/walk 1 mile total', '👟', 'distance', 'total', 1, 'common', 20),
-('5K Runner', 'Run/walk 3.1 miles total', '🏃', 'distance', 'total', 3, 'common', 50),
-('Marathon Prep', 'Run/walk 26 miles total', '🎽', 'distance', 'total', 26, 'rare', 200),
-('Ultra Runner', 'Run/walk 100 miles total', '🌟', 'distance', 'total', 100, 'epic', 500),
+('First Mile', 'Run/walk 1 mile total', '[SHOE]', 'distance', 'total', 1, 'onetime', 20),
+('5K Runner', 'Run/walk 3 miles total', '[RUN]', 'distance', 'total', 3, 'onetime', 50),
+('Marathon Prep', 'Run/walk 26 miles total', '[MEDAL]', 'distance', 'total', 26, 'onetime', 200),
 
 -- Time Milestones
-('Hour Warrior', 'Exercise for 60 total minutes', '⏱️', 'time', 'total', 60, 'common', 30),
-('Time Master', 'Exercise for 10 total hours', '⏰', 'time', 'total', 600, 'rare', 150),
-('Endurance Beast', 'Exercise for 50 total hours', '🦁', 'time', 'total', 3000, 'epic', 500),
+('Hour Warrior', 'Exercise for 60 total minutes', '[TIMER]', 'time', 'total', 60, 'onetime', 30),
+('Time Master', 'Exercise for 10 total hours', '[CLOCK]', 'time', 'total', 600, 'onetime', 150),
 
--- Social Achievements (for community feature)
-('Social Butterfly', 'Follow 5 users', '🦋', 'social', 'count', 5, 'common', 25),
-('Influencer', 'Have 10 followers', '✨', 'social', 'count', 10, 'rare', 100),
-('Community Leader', 'Have 50 followers', '👥', 'social', 'count', 50, 'epic', 300);
+-- Weekly Achievements (reset every week)
+('Weekly Warrior', 'Complete 3 workouts this week', '[ZAP]', 'workout', 'count', 3, 'weekly', 30),
+('Week Dominator', 'Complete 5 workouts this week', '[GLOW]', 'workout', 'count', 5, 'weekly', 50),
+('Weekly Beast', 'Complete 7 workouts this week', '[LION]', 'workout', 'count', 7, 'weekly', 100),
+
+-- Monthly Achievements (reset every month)
+('Monthly Master', 'Complete 12 workouts this month', '[BADGE]', 'workout', 'count', 12, 'monthly', 100),
+('Month Champion', 'Complete 20 workouts this month', '[DIAMOND]', 'workout', 'count', 20, 'monthly', 200),
+('Monthly Legend', 'Complete 30 workouts this month', '[KING]', 'workout', 'count', 30, 'monthly', 300);
 
 -- Show all tables
 SHOW TABLES;
+
