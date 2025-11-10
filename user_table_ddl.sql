@@ -167,5 +167,78 @@ CREATE TABLE user_progress_stats (
     INDEX idx_user (user_id)
 );
 
+-- Achievement definitions (predefined achievements)
+CREATE TABLE achievements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    icon VARCHAR(10) NOT NULL,
+    category ENUM('workout', 'streak', 'exercise', 'weight', 'distance', 'time', 'social', 'milestone') NOT NULL,
+    requirement_type ENUM('count', 'streak', 'total', 'single', 'variety') NOT NULL,
+    requirement_value INT NOT NULL,
+    rarity ENUM('common', 'rare', 'epic', 'legendary') NOT NULL DEFAULT 'common',
+    points INT NOT NULL DEFAULT 10,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User achievements (unlocked achievements)
+CREATE TABLE user_achievements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    achievement_id INT NOT NULL,
+    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    progress INT DEFAULT 0,
+    is_displayed BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_achievement (user_id, achievement_id),
+    INDEX idx_user (user_id),
+    INDEX idx_unlocked (unlocked_at)
+);
+
+-- Insert predefined achievements
+INSERT INTO achievements (name, description, icon, category, requirement_type, requirement_value, rarity, points) VALUES
+-- Workout Milestones
+('First Steps', 'Complete your first workout', '🎯', 'workout', 'count', 1, 'common', 10),
+('Getting Started', 'Complete 5 workouts', '💪', 'workout', 'count', 5, 'common', 25),
+('Consistency', 'Complete 10 workouts', '🔥', 'workout', 'count', 10, 'common', 50),
+('Dedicated', 'Complete 25 workouts', '⭐', 'workout', 'count', 25, 'rare', 100),
+('Warrior', 'Complete 50 workouts', '🏆', 'workout', 'count', 50, 'rare', 250),
+('Champion', 'Complete 100 workouts', '👑', 'workout', 'count', 100, 'epic', 500),
+('Legend', 'Complete 250 workouts', '💎', 'workout', 'count', 250, 'legendary', 1000),
+
+-- Streak Achievements
+('On Fire', 'Maintain a 3-day streak', '🔥', 'streak', 'streak', 3, 'common', 30),
+('Unstoppable', 'Maintain a 7-day streak', '⚡', 'streak', 'streak', 7, 'rare', 100),
+('Iron Will', 'Maintain a 14-day streak', '🛡️', 'streak', 'streak', 14, 'rare', 200),
+('Legendary Streak', 'Maintain a 30-day streak', '🌟', 'streak', 'streak', 30, 'epic', 500),
+('Year Warrior', 'Maintain a 365-day streak', '🎖️', 'streak', 'streak', 365, 'legendary', 2000),
+
+-- Exercise Variety
+('Explorer', 'Try 5 different exercises', '🗺️', 'exercise', 'variety', 5, 'common', 20),
+('Versatile', 'Try 10 different exercises', '🎨', 'exercise', 'variety', 10, 'common', 50),
+('Well-Rounded', 'Try 20 different exercises', '🌈', 'exercise', 'variety', 20, 'rare', 100),
+
+-- Strength Milestones
+('Lightweight', 'Lift a total of 1,000 lbs', '🏋️', 'weight', 'total', 1000, 'common', 50),
+('Heavyweight', 'Lift a total of 10,000 lbs', '💪', 'weight', 'total', 10000, 'rare', 200),
+('Powerhouse', 'Lift a total of 50,000 lbs', '⚡', 'weight', 'total', 50000, 'epic', 500),
+
+-- Cardio Milestones
+('First Mile', 'Run/walk 1 mile total', '👟', 'distance', 'total', 1, 'common', 20),
+('5K Runner', 'Run/walk 3.1 miles total', '🏃', 'distance', 'total', 3, 'common', 50),
+('Marathon Prep', 'Run/walk 26 miles total', '🎽', 'distance', 'total', 26, 'rare', 200),
+('Ultra Runner', 'Run/walk 100 miles total', '🌟', 'distance', 'total', 100, 'epic', 500),
+
+-- Time Milestones
+('Hour Warrior', 'Exercise for 60 total minutes', '⏱️', 'time', 'total', 60, 'common', 30),
+('Time Master', 'Exercise for 10 total hours', '⏰', 'time', 'total', 600, 'rare', 150),
+('Endurance Beast', 'Exercise for 50 total hours', '🦁', 'time', 'total', 3000, 'epic', 500),
+
+-- Social Achievements (for community feature)
+('Social Butterfly', 'Follow 5 users', '🦋', 'social', 'count', 5, 'common', 25),
+('Influencer', 'Have 10 followers', '✨', 'social', 'count', 10, 'rare', 100),
+('Community Leader', 'Have 50 followers', '👥', 'social', 'count', 50, 'epic', 300);
+
 -- Show all tables
 SHOW TABLES;

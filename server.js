@@ -274,6 +274,72 @@ async function updateUserProgressStats(userId) {
         console.error('Error updating user progress stats:', error);
     }
 }
+async function checkAndUnlockAchievements(userId) {
+    try {
+        const [stats] = await pool.execute(
+            'SELECT * FROM user_progress_stats WHERE user_id = ?',
+            [userId]
+        );
+
+        if (stats.length === 0) return [];
+
+        const userStats = stats[0];
+        const newlyUnlocked = [];
+
+        const [lockedAchievements] = await pool.execute(
+            `SELECT a.* FROM achievements a
+            LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = ?
+            WHERE ua.id IS NULL`,
+            [userId]
+        );
+
+        for (const achievement of lockedAchievements) {
+            let shouldUnlock = false;
+
+            switch(achievement.requirement_type) {
+                case 'count':
+                    if (achievement.category === 'workout' && userStats.total_workouts >= achievement.requirement_value) {
+                        shouldUnlock = true;
+                    } else if (achievement.category === 'exercise' && userStats.total_exercises >= achievement.requirement_value) {
+                        shouldUnlock = true;
+                    }
+                    break;
+                case 'streak':
+                    if (userStats.current_streak >= achievement.requirement_value) {
+                        shouldUnlock = true;
+                    }
+                    break;
+                case 'total':
+                    if (achievement.category === 'weight' && userStats.total_weight_lifted >= achievement.requirement_value) {
+                        shouldUnlock = true;
+                    } else if (achievement.category === 'distance' && userStats.total_distance_miles >= achievement.requirement_value) {
+                        shouldUnlock = true;
+                    } else if (achievement.category === 'time' && userStats.total_duration_minutes >= achievement.requirement_value) {
+                        shouldUnlock = true;
+                    }
+                    break;
+                case 'variety':
+                    if (userStats.unique_exercises >= achievement.requirement_value) {
+                        shouldUnlock = true;
+                    }
+                    break;
+            }
+
+            if (shouldUnlock) {
+                await pool.execute(
+                    'INSERT INTO user_achievements (user_id, achievement_id, progress) VALUES (?, ?, ?)',
+                    [userId, achievement.id, achievement.requirement_value]
+                );
+                newlyUnlocked.push(achievement);
+            }
+        }
+
+        return newlyUnlocked;
+    } catch (error) {
+        console.error('Error checking achievements:', error);
+        return [];
+    }
+}
 
 //////////////////////////////////////
 //ROUTES TO SERVE HTML FILES
@@ -697,7 +763,19 @@ app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
         // Update user progress stats
         await updateUserProgressStats(userId);
 
-        res.status(200).json({ message: 'Workout completed!' });
+        // Check and unlock achievements
+        const newAchievements = await checkAndUnlockAchievements(userId);
+
+        // Send response with new achievements if any
+        if (newAchievements.length > 0) {
+            res.status(200).json({ 
+                message: 'Workout completed!',
+                newAchievements: newAchievements
+            });
+        } else {
+            res.status(200).json({ message: 'Workout completed!' });
+        }
+
     } catch (error) {
         console.error('Error completing workout:', error);
         res.status(500).json({ message: 'Error completing workout.' });
@@ -813,7 +891,96 @@ app.get('/api/progress/records', authenticateToken, async (req, res) => {
     }
 });
 
-// Start the server
+
+
+// Get all achievements with user progress
+app.get('/api/achievements', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const userId = userRows[0].id;
+
+        const [achievements] = await pool.execute(
+            `SELECT 
+                a.id, a.name, a.description, a.icon, a.category,
+                a.requirement_type, a.requirement_value, a.rarity, a.points,
+                ua.unlocked_at, ua.progress, ua.is_displayed,
+                CASE WHEN ua.id IS NOT NULL THEN 1 ELSE 0 END as is_unlocked
+            FROM achievements a
+            LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = ?
+            ORDER BY 
+                CASE a.rarity
+                    WHEN 'legendary' THEN 4
+                    WHEN 'epic' THEN 3
+                    WHEN 'rare' THEN 2
+                    ELSE 1
+                END DESC,
+                a.requirement_value ASC`,
+            [userId]
+        );
+
+        const [stats] = await pool.execute(
+            'SELECT * FROM user_progress_stats WHERE user_id = ?',
+            [userId]
+        );
+
+        const userStats = stats[0] || {};
+
+        achievements.forEach(achievement => {
+            if (!achievement.is_unlocked) {
+                let currentProgress = 0;
+                
+                switch(achievement.requirement_type) {
+                    case 'count':
+                        if (achievement.category === 'workout') {
+                            currentProgress = userStats.total_workouts || 0;
+                        } else if (achievement.category === 'exercise') {
+                            currentProgress = userStats.total_exercises || 0;
+                        }
+                        break;
+                    case 'streak':
+                        currentProgress = userStats.current_streak || 0;
+                        break;
+                    case 'total':
+                        if (achievement.category === 'weight') {
+                            currentProgress = Math.floor(userStats.total_weight_lifted || 0);
+                        } else if (achievement.category === 'distance') {
+                            currentProgress = Math.floor(userStats.total_distance_miles || 0);
+                        } else if (achievement.category === 'time') {
+                            currentProgress = Math.floor(userStats.total_duration_minutes || 0);
+                        }
+                        break;
+                    case 'variety':
+                        currentProgress = userStats.unique_exercises || 0;
+                        break;
+                }
+                
+                achievement.progress = currentProgress;
+                achievement.progress_percentage = Math.min(100, Math.floor((currentProgress / achievement.requirement_value) * 100));
+            } else {
+                achievement.progress = achievement.requirement_value;
+                achievement.progress_percentage = 100;
+            }
+        });
+
+        res.json(achievements);
+    } catch (error) {
+        console.error('Error loading achievements:', error);
+        res.status(500).json({ message: 'Error loading achievements.' });
+    }
+});
+
+
+// Start the server  <-- This stays here
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });

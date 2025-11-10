@@ -1,46 +1,387 @@
 <div class="page-header">
-    <h1>Achievements</h1>
-    <p>Track your milestones and earn rewards for your dedication.</p>
+    <h1>🏆 Achievements</h1>
+    <p>Track your fitness milestones and unlock rewards!</p>
 </div>
 
-<div class="points-banner">
-    <h2>Your Points: <span id="total-points">0</span></h2>
-    <div class="points-value">🏆</div>
-    <p>Next reward at 100 points</p>
-</div>
-
-<div class="achievements-grid">
-    <div class="achievement-card locked">
-        <div class="achievement-icon">🏃</div>
-        <div class="achievement-title">First Workout</div>
-        <div class="achievement-desc">Complete your first workout session</div>
-        <div class="achievement-reward">Reward: 10 points</div>
+<!-- Stats Summary with gradients -->
+<div class="stats-grid">
+    <div class="stat-card stat-unlocked">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-content">
+            <h3 id="total-unlocked">0</h3>
+            <p>Unlocked</p>
+        </div>
     </div>
-
-    <div class="achievement-card locked">
-        <div class="achievement-icon">📅</div>
-        <div class="achievement-title">Week Warrior</div>
-        <div class="achievement-desc">Complete 7 workouts in a week</div>
-        <div class="achievement-reward">Reward: 50 points</div>
+    <div class="stat-card stat-points">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-content">
+            <h3 id="total-points">0</h3>
+            <p>Total Points</p>
+        </div>
     </div>
-
-    <div class="achievement-card locked">
-        <div class="achievement-icon">💪</div>
-        <div class="achievement-title">Strength Seeker</div>
-        <div class="achievement-desc">Increase weight on any exercise</div>
-        <div class="achievement-reward">Reward: 25 points</div>
-    </div>
-
-    <div class="achievement-card locked">
-        <div class="achievement-icon">📊</div>
-        <div class="achievement-title">Data Tracker</div>
-        <div class="achievement-desc">Log 30 different exercises</div>
-        <div class="achievement-reward">Reward: 75 points</div>
+    <div class="stat-card stat-completion">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+            <h3 id="completion-rate">0%</h3>
+            <p>Completion</p>
+        </div>
     </div>
 </div>
+
+<!-- Level Progress Bar -->
+<div class="card level-progress-card">
+    <div class="level-header">
+        <div class="level-info">
+            <div class="level-badge">
+                <span id="user-level">1</span>
+            </div>
+            <div>
+                <h3 style="margin: 0;">Level <span id="user-level-text">1</span></h3>
+                <p style="margin: 0.25rem 0 0 0; color: #6b7280;" id="level-title">Beginner</p>
+            </div>
+        </div>
+        <div class="level-xp">
+            <span id="current-xp">0</span> / <span id="next-level-xp">100</span> XP
+        </div>
+    </div>
+    <div class="progress-bar-container" style="margin-top: 1rem;">
+        <div class="progress-bar-fill" id="level-progress-bar"></div>
+    </div>
+</div>
+
+<!-- Category Filters -->
+<div class="filter-tabs">
+    <button class="filter-tab active" onclick="filterCategory('all')">All</button>
+    <button class="filter-tab" onclick="filterCategory('onetime')">One-Time</button>
+    <button class="filter-tab" onclick="filterCategory('weekly')">Weekly</button>
+    <button class="filter-tab" onclick="filterCategory('monthly')">Monthly</button>
+</div>
+
+<!-- Achievements Grid -->
+<div id="achievements-container" class="achievements-grid">
+    <p style="text-align: center; padding: 2rem;">Loading achievements...</p>
+</div>
+
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    padding: 1.5rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    color: white;
+}
+
+.stat-unlocked {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.stat-points {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.stat-completion {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    opacity: 0.9;
+}
+
+.stat-content h3 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.stat-content p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.level-progress-card {
+    margin-bottom: 2rem;
+}
+
+.level-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.level-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.level-badge {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.75rem;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.level-xp {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.progress-bar-container {
+    height: 12px;
+    background: var(--background);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%);
+    border-radius: 10px;
+    transition: width 1s ease-out;
+    width: 0;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--border);
+    background: var(--card-bg);
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.filter-tab:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.filter-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.achievement-card {
+    background: var(--card-bg);
+    border-radius: 15px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    border: 2px solid var(--border);
+}
+
+.achievement-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.achievement-card.locked {
+    opacity: 0.6;
+}
+
+.achievement-card.unlocked {
+    border-color: var(--success);
+    background: linear-gradient(135deg, rgba(5, 150, 105, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+}
+
+.achievement-icon {
+    font-size: 3.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.achievement-card.locked .achievement-icon {
+    filter: grayscale(1) opacity(0.5);
+}
+
+.achievement-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+}
+
+.achievement-description {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 1rem;
+}
+
+.achievement-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.achievement-type {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.type-onetime {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.type-weekly {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.type-monthly {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.achievement-points {
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.achievement-progress {
+    margin-top: 1rem;
+}
+
+.progress-bar-small-container {
+    height: 8px;
+    background: var(--background);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar-small {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, #8b5cf6 100%);
+    border-radius: 10px;
+    transition: width 1s ease-out;
+}
+
+.progress-text {
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-align: center;
+}
+
+.unlocked-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--success);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+@keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(400%) rotate(45deg); }
+}
+
+.achievement-card.unlocked::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shine 3s infinite;
+}
+
+@media (max-width: 768px) {
+    .achievements-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .level-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+</style>
 
 <script>
-setActiveNav('achievements');
+let allAchievements = [];
+let currentFilter = 'all';
+
+// Icon mapping
+const iconMap = {
+    '[TARGET]': '🎯',
+    '[MUSCLE]': '💪',
+    '[FIRE]': '🔥',
+    '[STAR]': '⭐',
+    '[TROPHY]': '🏆',
+    '[CROWN]': '👑',
+    '[GEM]': '💎',
+    '[BOLT]': '⚡',
+    '[SHIELD]': '🛡️',
+    '[STARS]': '🌟',
+    '[MAP]': '🗺️',
+    '[PAINT]': '🎨',
+    '[RAINBOW]': '🌈',
+    '[WEIGHT]': '🏋️',
+    '[POWER]': '💪',
+    '[FLASH]': '⚡',
+    '[SHOE]': '👟',
+    '[RUN]': '🏃',
+    '[MEDAL]': '🎽',
+    '[TIMER]': '⏱️',
+    '[CLOCK]': '⏰',
+    '[ZAP]': '⚡',
+    '[GLOW]': '🌟',
+    '[LION]': '🦁',
+    '[BADGE]': '🎖️',
+    '[DIAMOND]': '💎',
+    '[KING]': '👑'
+};
+
+document.addEventListener('DOMContentLoaded', async function() {
+    setActiveNav('achievements');
+    await loadAchievements();
+});
 
 async function loadAchievements() {
     const token = localStorage.getItem('jwtToken');
@@ -51,13 +392,98 @@ async function loadAchievements() {
         });
         
         if (response.ok) {
-            const data = await response.json();
-            document.getElementById('total-points').textContent = data.totalPoints || 0;
+            allAchievements = await response.json();
+            // Convert icon codes to emojis
+            allAchievements.forEach(a => {
+                a.displayIcon = iconMap[a.icon] || '🏅';
+            });
+            displayStats();
+            displayAchievements(allAchievements);
+        } else {
+            document.getElementById('achievements-container').innerHTML = 
+                '<p style="text-align: center; padding: 2rem; color: var(--error);">Failed to load achievements.</p>';
         }
     } catch (error) {
         console.error('Error loading achievements:', error);
+        document.getElementById('achievements-container').innerHTML = 
+            '<p style="text-align: center; padding: 2rem; color: var(--error);">Error loading achievements.</p>';
     }
 }
 
-loadAchievements();
+function displayStats() {
+    const unlocked = allAchievements.filter(a => a.is_unlocked).length;
+    const total = allAchievements.length;
+    const points = allAchievements.filter(a => a.is_unlocked).reduce((sum, a) => sum + a.points, 0);
+    const rate = total > 0 ? Math.floor((unlocked / total) * 100) : 0;
+    
+    const level = Math.floor(points / 100) + 1;
+    const currentLevelPoints = points % 100;
+    const nextLevelPoints = 100;
+    const progressPercent = (currentLevelPoints / nextLevelPoints) * 100;
+    
+    const titles = ['Beginner', 'Novice', 'Intermediate', 'Advanced', 'Expert', 'Master', 'Champion', 'Legend'];
+    const titleIndex = Math.min(Math.floor((level - 1) / 3), titles.length - 1);
+    
+    document.getElementById('total-unlocked').textContent = unlocked;
+    document.getElementById('total-points').textContent = points;
+    document.getElementById('completion-rate').textContent = `${rate}%`;
+    
+    document.getElementById('user-level').textContent = level;
+    document.getElementById('user-level-text').textContent = level;
+    document.getElementById('level-title').textContent = titles[titleIndex];
+    document.getElementById('current-xp').textContent = currentLevelPoints;
+    document.getElementById('next-level-xp').textContent = nextLevelPoints;
+    document.getElementById('level-progress-bar').style.width = `${progressPercent}%`;
+}
+
+function displayAchievements(achievements) {
+    const container = document.getElementById('achievements-container');
+    
+    if (achievements.length === 0) {
+        container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No achievements found.</p>';
+        return;
+    }
+    
+    const html = achievements.map(achievement => `
+        <div class="achievement-card ${achievement.is_unlocked ? 'unlocked' : 'locked'}" data-category="${achievement.rarity}">
+            ${achievement.is_unlocked ? '<div class="unlocked-badge">✓ Unlocked</div>' : ''}
+            <div class="achievement-icon">${achievement.displayIcon}</div>
+            <div class="achievement-name">${achievement.name}</div>
+            <div class="achievement-description">${achievement.description}</div>
+            
+            ${!achievement.is_unlocked ? `
+                <div class="achievement-progress">
+                    <div class="progress-bar-small-container">
+                        <div class="progress-bar-small" style="width: ${achievement.progress_percentage}%"></div>
+                    </div>
+                    <div class="progress-text">${achievement.progress} / ${achievement.requirement_value}</div>
+                </div>
+            ` : `
+                <div style="text-align: center; color: var(--success); font-size: 0.85rem; margin-top: 1rem;">
+                    🎉 Unlocked ${new Date(achievement.unlocked_at).toLocaleDateString()}
+                </div>
+            `}
+            
+            <div class="achievement-footer">
+                <span class="achievement-type type-${achievement.rarity}">${achievement.rarity}</span>
+                <span class="achievement-points">+${achievement.points} XP</span>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+function filterCategory(category) {
+    currentFilter = category;
+    
+    document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    const filtered = category === 'all' 
+        ? allAchievements 
+        : allAchievements.filter(a => a.rarity === category);
+    
+    displayAchievements(filtered);
+}
 </script>
