@@ -3,17 +3,15 @@
     <p>Connect with fitness enthusiasts, share progress, and challenge friends!</p>
 </div>
 
-<!-- Success message -->
 <div id="success-message" class="success-message" style="display: none;">
     <span id="success-text"></span>
 </div>
 
-<!-- Tab Navigation -->
 <div class="community-tabs">
     <button class="tab-btn active" onclick="switchTab('feed')">
         <span>📰</span> Feed
     </button>
-    <button class="tab-btn" onclick="switchTab('discover')">
+    <button class="tab-btn" onclick="switchTab('people')">
         <span>🔍</span> People
     </button>
     <button class="tab-btn" onclick="switchTab('challenges')">
@@ -40,27 +38,21 @@
     </div>
 </div>
 
-<!-- Discover Tab (includes following) -->
-<div id="discover-tab" class="tab-content">
-    <div class="discover-tabs">
-        <button class="discover-tab-btn active" onclick="switchDiscoverTab('search')">Search</button>
-        <button class="discover-tab-btn" onclick="switchDiscoverTab('following')">Following</button>
+<!-- People Tab (Following + Search) -->
+<div id="people-tab" class="tab-content">
+    <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Search users..." onkeyup="searchUsers()">
+        <button onclick="searchUsers()">🔍 Search</button>
     </div>
     
-    <div id="discover-search" class="discover-content active">
-        <div class="search-bar">
-            <input type="text" id="search-input" placeholder="Search users..." onkeyup="searchUsers()">
-            <button onclick="searchUsers()">🔍 Search</button>
-        </div>
-        <div id="users-container" class="users-grid">
-            <p style="text-align: center; padding: 2rem; color: #6b7280;">Search for users to connect!</p>
-        </div>
+    <h3 style="margin-top: 2rem;">Following</h3>
+    <div id="following-container" class="users-grid">
+        <p style="text-align: center; padding: 2rem; color: #6b7280;">Loading...</p>
     </div>
     
-    <div id="discover-following" class="discover-content">
-        <div id="following-container">
-            <p style="text-align: center; padding: 2rem; color: #6b7280;">Loading...</p>
-        </div>
+    <div id="search-results-section" style="display: none;">
+        <h3 style="margin-top: 2rem;">Search Results</h3>
+        <div id="users-container" class="users-grid"></div>
     </div>
 </div>
 
@@ -331,41 +323,6 @@
     color: var(--primary);
 }
 
-.discover-tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.discover-tab-btn {
-    flex: 1;
-    padding: 0.75rem;
-    background: var(--card-bg);
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.3s;
-}
-
-.discover-tab-btn:hover {
-    border-color: var(--primary);
-}
-
-.discover-tab-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-.discover-content {
-    display: none;
-}
-
-.discover-content.active {
-    display: block;
-}
-
 .challenge-tabs {
     display: flex;
     gap: 0.5rem;
@@ -404,7 +361,6 @@
 .search-bar {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 2rem;
 }
 
 .search-bar input {
@@ -1089,6 +1045,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadSentChallenges();
     await loadLeaderboard('xp');
     await loadProfileSettings();
+    await loadFollowing();
     
     document.getElementById('profile-form').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -1113,16 +1070,8 @@ function switchTab(tab) {
     
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     document.getElementById(`${tab}-tab`).classList.add('active');
-}
-
-function switchDiscoverTab(tab) {
-    document.querySelectorAll('.discover-tab-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
     
-    document.querySelectorAll('.discover-content').forEach(content => content.classList.remove('active'));
-    document.getElementById(`discover-${tab}`).classList.add('active');
-    
-    if (tab === 'following') {
+    if (tab === 'people') {
         loadFollowing();
     }
 }
@@ -1218,7 +1167,7 @@ async function loadFeed() {
             const posts = await response.json();
             
             if (posts.length === 0) {
-                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No posts yet. Follow some users to see their activity!</p>';
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No posts yet. Complete workouts or unlock achievements to share with the community!</p>';
                 return;
             }
             
@@ -1263,9 +1212,10 @@ async function searchUsers() {
     const query = document.getElementById('search-input').value;
     const token = localStorage.getItem('jwtToken');
     const container = document.getElementById('users-container');
+    const resultsSection = document.getElementById('search-results-section');
     
     if (query.length < 2) {
-        container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">Enter at least 2 characters to search.</p>';
+        resultsSection.style.display = 'none';
         return;
     }
     
@@ -1276,6 +1226,7 @@ async function searchUsers() {
         
         if (response.ok) {
             const users = await response.json();
+            resultsSection.style.display = 'block';
             
             if (users.length === 0) {
                 container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No users found.</p>';
@@ -1316,29 +1267,25 @@ async function loadFollowing() {
             const users = await response.json();
             
             if (users.length === 0) {
-                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">You are not following anyone yet.</p>';
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">You are not following anyone yet. Search for users above to connect!</p>';
                 return;
             }
             
-            container.innerHTML = `
-                <div class="users-grid">
-                    ${users.map(user => `
-                        <div class="user-card" onclick="viewProfile(${user.id})">
-                            <div class="user-card-avatar" style="background: #2563eb;">
-                                ${user.profile_picture ? `<img src="${user.profile_picture}" alt="${user.display_name}">` : user.display_name.charAt(0)}
-                            </div>
-                            <h3>${user.display_name}</h3>
-                            <p>${user.bio || 'No bio yet'}</p>
-                            <div class="user-card-stats">
-                                <div class="user-stat">
-                                    <span class="user-stat-value">${user.followers_count}</span>
-                                    <span class="user-stat-label">Followers</span>
-                                </div>
-                            </div>
+            container.innerHTML = users.map(user => `
+                <div class="user-card" onclick="viewProfile(${user.id})">
+                    <div class="user-card-avatar" style="background: #2563eb;">
+                        ${user.profile_picture ? `<img src="${user.profile_picture}" alt="${user.display_name}">` : user.display_name.charAt(0)}
+                    </div>
+                    <h3>${user.display_name}</h3>
+                    <p>${user.bio || 'No bio yet'}</p>
+                    <div class="user-card-stats">
+                        <div class="user-stat">
+                            <span class="user-stat-value">${user.followers_count}</span>
+                            <span class="user-stat-label">Followers</span>
                         </div>
-                    `).join('')}
+                    </div>
                 </div>
-            `;
+            `).join('');
         }
     } catch (error) {
         console.error('Error loading following:', error);
@@ -1383,7 +1330,7 @@ async function viewProfile(userId) {
             }
             
             const achievementsContainer = document.getElementById('profile-achievements');
-            if (profile.showcaseAchievements.length > 0) {
+            if (profile.showcaseAchievements && profile.showcaseAchievements.length > 0) {
                 achievementsContainer.innerHTML = profile.showcaseAchievements.map(ach => `
                     <div class="showcase-achievement">
                         <div class="showcase-achievement-icon">${iconMap[ach.icon] || '🏅'}</div>
@@ -1391,11 +1338,11 @@ async function viewProfile(userId) {
                     </div>
                 `).join('');
             } else {
-                achievementsContainer.innerHTML = '<p style="color: #6b7280;">No achievements to display</p>';
+                achievementsContainer.innerHTML = '<p style="color: #6b7280;">No achievements yet</p>';
             }
             
             const workoutsContainer = document.getElementById('profile-workouts-list');
-            if (profile.recentWorkouts.length > 0) {
+            if (profile.recentWorkouts && profile.recentWorkouts.length > 0) {
                 workoutsContainer.innerHTML = profile.recentWorkouts.map(w => `
                     <div class="workout-item">
                         <h4>${w.workout_name}</h4>
@@ -1433,6 +1380,7 @@ async function toggleFollow() {
             followBtn.style.background = data.following ? '#6b7280' : 'var(--primary)';
             
             viewProfile(selectedUserId);
+            loadFollowing();
         }
     } catch (error) {
         console.error('Error toggling follow:', error);
@@ -1524,12 +1472,12 @@ async function viewChallengeWorkout(workoutSessionId, workoutName) {
         
         if (response.ok) {
             const workouts = await response.json();
-            const workout = workouts.find(w => w.id === workoutSessionId);
+            const workout = workouts.find(w => w.id == workoutSessionId);
             
             if (workout) {
                 document.getElementById('workout-detail-title').textContent = workoutName;
                 document.getElementById('workout-exercises-list').innerHTML = `
-                    <div style="background: var(--background); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="background: var(--background); padding: 1rem; border-radius: 8px;">
                         ${workout.exercises.map((ex, index) => `
                             <div style="padding: 0.75rem; border-bottom: 1px solid var(--border); ${index === workout.exercises.length - 1 ? 'border-bottom: none;' : ''}">
                                 <h4 style="margin: 0 0 0.5rem 0;">${index + 1}. ${ex.name}</h4>
@@ -1554,7 +1502,7 @@ async function viewChallengeWorkout(workoutSessionId, workoutName) {
 
 function startChallengeWorkout() {
     if (currentChallengeWorkoutId) {
-        window.location.href = `/workout?challenge=${currentChallengeWorkoutId}`;
+        window.location.href = `/workout?session=${currentChallengeWorkoutId}`;
     }
 }
 
@@ -1601,7 +1549,7 @@ async function loadReceivedChallenges() {
                             <button class="btn-decline" onclick="respondToChallenge(${c.id}, 'decline')">Decline</button>
                         </div>
                     ` : c.status === 'accepted' ? `
-                        <button class="btn-primary" onclick="viewChallengeWorkout(${c.workout_session_id}, '${c.workout_name}')" style="width: 100%; margin-top: 1rem;">
+                        <button class="btn-primary" onclick="viewChallengeWorkout(${c.workout_session_id}, '${c.workout_name.replace(/'/g, "\\'")}')" style="width: 100%; margin-top: 1rem;">
                             View Workout 👀
                         </button>
                     ` : ''}

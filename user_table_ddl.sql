@@ -1,19 +1,27 @@
 USE cis440fall2025team5;
 
--- Drop all existing tables in correct order 
---(not updated)
-DROP TABLE IF EXISTS user_achievements;
-DROP TABLE IF EXISTS achievements;
-DROP TABLE IF EXISTS workout_completions;
-DROP TABLE IF EXISTS exercise_personal_records;
-DROP TABLE IF EXISTS exercise_history;
-DROP TABLE IF EXISTS user_progress_stats;
-DROP TABLE IF EXISTS workouts;
-DROP TABLE IF EXISTS workout_sessions;
-DROP TABLE IF EXISTS exercise_history_old;
-DROP TABLE IF EXISTS users_logins;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS user;
+-- Drop all existing tables in correct order (not updated)
+DROP TABLE IF EXISTS `post_likes`;
+DROP TABLE IF EXISTS `post_comments`;
+DROP TABLE IF EXISTS `user_posts`;
+DROP TABLE IF EXISTS `user_showcase_achievements`;
+DROP TABLE IF EXISTS `user_achievements`;
+DROP TABLE IF EXISTS `achievements`;
+DROP TABLE IF EXISTS `workout_challenges`;
+DROP TABLE IF EXISTS `workouts`;
+DROP TABLE IF EXISTS `workout_completions`;
+DROP TABLE IF EXISTS `exercise_history`;
+DROP TABLE IF EXISTS `exercise_personal_records`;
+DROP TABLE IF EXISTS `user_progress_stats`;
+DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `leaderboards`;
+DROP TABLE IF EXISTS `user_follows`;
+DROP TABLE IF EXISTS `user_profiles`;
+DROP TABLE IF EXISTS `workout_sessions`;
+DROP TABLE IF EXISTS `exercise_history_old`;
+DROP TABLE IF EXISTS `users_logins`;
+DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `user`;
 
 -- User table
 CREATE TABLE `user` (
@@ -251,7 +259,7 @@ CREATE TABLE user_profiles (
     user_id INT PRIMARY KEY,
     profile_picture VARCHAR(255) DEFAULT NULL,
     cover_image VARCHAR(255) DEFAULT NULL,
-    profile_color VARCHAR(7) DEFAULT '#2563eb'
+    profile_color VARCHAR(7) DEFAULT '#2563eb',
     bio TEXT DEFAULT NULL,
     location VARCHAR(100) DEFAULT NULL,
     fitness_goal TEXT DEFAULT NULL,

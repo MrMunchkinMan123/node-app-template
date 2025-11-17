@@ -657,130 +657,64 @@ app.get('/api/workouts/completions', authenticateToken, async (req, res) => {
     }
 });
 
-// Mark workout as complete
+// Mark workout as complete (REPLACE the old one with this)
 app.post('/api/workouts/:id/complete', authenticateToken, async (req, res) => {
     const workoutId = req.params.id;
     const userEmail = req.user.email;
 
     try {
-        const [userRows] = await pool.execute(
-            'SELECT id FROM user WHERE email = ?',
-            [userEmail]
-        );
-
-        if (userRows.length === 0) {
-            return res.status(404).json({ message: 'User not found.' });
-        }
-
+        const [userRows] = await pool.execute('SELECT id FROM user WHERE email = ?', [userEmail]);
+        if (userRows.length === 0) return res.status(404).json({ message: 'User not found.' });
+        
         const userId = userRows[0].id;
 
-        // Get workout details with exercises
-        const [sessionRows] = await pool.execute(
-            'SELECT workout_name, workout_date FROM workout_sessions WHERE id = ? AND user_id = ?',
-            [workoutId, userId]
-        );
-
-        if (sessionRows.length === 0) {
-            return res.status(404).json({ message: 'Workout not found.' });
-        }
-
+        // Fetch workout details to create a permanent record
+        const [sessionRows] = await pool.execute('SELECT workout_name FROM workout_sessions WHERE id = ?', [workoutId]);
+        if (sessionRows.length === 0) return res.status(404).json({ message: 'Workout not found.' });
+        
         const workout = sessionRows[0];
+        const [exerciseRows] = await pool.execute('SELECT * FROM workouts WHERE workout_session_id = ?', [workoutId]);
 
-        // Get all exercises for this workout
-        const [exerciseRows] = await pool.execute(
-            'SELECT * FROM workouts WHERE workout_session_id = ?',
-            [workoutId]
-        );
-
-        const completedAt = new Date();
-
-        // Convert exercises to JSON format
-        const exercisesData = exerciseRows.map(ex => ({
-            name: ex.exercise_name,
-            type: ex.exercise_type,
-            category: ex.category,
-            sets: ex.sets,
-            reps: ex.reps,
-            weight: ex.weight,
-            duration: ex.duration,
-            distance: ex.distance
-        }));
-
-        // Insert into workout_completions table (permanent record)
+        // Insert into permanent completion and history tables
+        await pool.execute('UPDATE workout_sessions SET completion_count = completion_count + 1 WHERE id = ?', [workoutId]);
+        
+        const exercisesData = JSON.stringify(exerciseRows.map(ex => ({ name: ex.exercise_name, type: ex.exercise_type, category: ex.category, sets: ex.sets, reps: ex.reps, weight: ex.weight, duration: ex.duration, distance: ex.distance })));
         await pool.execute(
-            'INSERT INTO workout_completions (user_id, workout_session_id, workout_name, completed_at, exercises_data) VALUES (?, ?, ?, ?, ?)',
-            [userId, workoutId, workout.workout_name, completedAt, JSON.stringify(exercisesData)]
+            'INSERT INTO workout_completions (user_id, workout_session_id, workout_name, completed_at, exercises_data) VALUES (?, ?, ?, NOW(), ?)',
+            [userId, workoutId, workout.workout_name, exercisesData]
         );
-
-        // Update the workout_sessions with latest completion
-        await pool.execute(
-            'UPDATE workout_sessions SET completed_at = ?, completion_count = completion_count + 1 WHERE id = ?',
-            [completedAt, workoutId]
-        );
-
-        // Record in exercise_history
-        for (const exercise of exercisesData) {
-            await pool.execute(
-                `INSERT INTO exercise_history 
-                (user_id, workout_session_id, exercise_name, category, sets, reps, weight, duration, distance, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    userId,
-                    workoutId,
-                    exercise.name,
-                    exercise.category,
-                    exercise.sets || null,
-                    exercise.reps || null,
-                    exercise.weight || null,
-                    exercise.duration || null,
-                    exercise.distance || null,
-                    completedAt
-                ]
-            );
-
-            // Update personal records
-            await pool.execute(
-                `INSERT INTO exercise_personal_records 
-                (user_id, exercise_name, category, max_weight, max_reps, max_sets, longest_duration, longest_distance, times_performed)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-                ON DUPLICATE KEY UPDATE
-                    max_weight = GREATEST(COALESCE(max_weight, 0), COALESCE(?, 0)),
-                    max_reps = GREATEST(COALESCE(max_reps, 0), COALESCE(?, 0)),
-                    max_sets = GREATEST(COALESCE(max_sets, 0), COALESCE(?, 0)),
-                    longest_duration = GREATEST(COALESCE(longest_duration, 0), COALESCE(?, 0)),
-                    longest_distance = GREATEST(COALESCE(longest_distance, 0), COALESCE(?, 0)),
-                    times_performed = times_performed + 1`,
-                [
-                    userId, exercise.name, exercise.category,
-                    exercise.weight || null, exercise.reps || null, exercise.sets || null,
-                    exercise.duration || null, exercise.distance || null,
-                    exercise.weight || null, exercise.reps || null, exercise.sets || null,
-                    exercise.duration || null, exercise.distance || null
-                ]
-            );
-        }
-
-        // Update user progress stats
+        
+        // Update stats and check for achievements
         await updateUserProgressStats(userId);
-
-        // Check and unlock achievements
         const newAchievements = await checkAndUnlockAchievements(userId);
 
-        // Send response with new achievements if any
-        if (newAchievements.length > 0) {
-            res.status(200).json({ 
-                message: 'Workout completed!',
-                newAchievements: newAchievements
-            });
-        } else {
-            res.status(200).json({ message: 'Workout completed!' });
+        // -- FEED POST CREATION --
+        // Create a post for the completed workout
+        await pool.execute(
+            `INSERT INTO user_posts (user_id, post_type, content, workout_session_id) VALUES (?, 'workout', ?, ?)`,
+            [userId, `Completed the workout: **${workout.workout_name}**`, workoutId]
+        );
+
+        // Create posts for any new achievements
+        for (const achievement of newAchievements) {
+            await pool.execute(
+                `INSERT INTO user_posts (user_id, post_type, content, achievement_id) VALUES (?, 'achievement', ?, ?)`,
+                [userId, `Unlocked a new achievement: **${achievement.name}!**`, achievement.id]
+            );
         }
+        // -- END FEED POST CREATION --
+
+        res.status(200).json({ 
+            message: 'Workout completed!',
+            newAchievements: newAchievements
+        });
 
     } catch (error) {
         console.error('Error completing workout:', error);
         res.status(500).json({ message: 'Error completing workout.' });
     }
 });
+
 
 // Delete a workout
 app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
@@ -819,6 +753,31 @@ app.delete('/api/workouts/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error deleting workout:', error);
         res.status(500).json({ message: 'Error deleting workout.' });
+    }
+});
+// Get a single workout by ID (for challenges)
+app.get('/api/workouts/:id', authenticateToken, async (req, res) => {
+    const workoutId = req.params.id;
+
+    try {
+        const [session] = await pool.execute(
+            'SELECT * FROM workout_sessions WHERE id = ?',
+            [workoutId]
+        );
+
+        if (session.length === 0) {
+            return res.status(404).json({ message: 'Workout not found.' });
+        }
+
+        const [exercises] = await pool.execute(
+            'SELECT * FROM workouts WHERE workout_session_id = ?',
+            [workoutId]
+        );
+
+        res.json({ ...session[0], exercises });
+    } catch (error) {
+        console.error('Error loading single workout:', error);
+        res.status(500).json({ message: 'Error loading workout.' });
     }
 });
 
@@ -983,7 +942,7 @@ app.get('/api/achievements', authenticateToken, async (req, res) => {
 // COMMUNITY API ROUTES
 //////////////////////////////////////
 
-// Get user profile (public view)
+// Get user profile (FIXED - with achievements)
 app.get('/api/community/profile/:userId', authenticateToken, async (req, res) => {
     const userId = req.params.userId;
     const userEmail = req.user.email;
@@ -1042,14 +1001,14 @@ app.get('/api/community/profile/:userId', authenticateToken, async (req, res) =>
             [viewerUserId, userId]
         );
 
-        const [showcaseAchievements] = await pool.execute(
+        // Get ALL unlocked achievements (not just showcased)
+        const [unlockedAchievements] = await pool.execute(
             `SELECT a.*, ua.unlocked_at
-            FROM user_showcase_achievements usa
-            JOIN achievements a ON usa.achievement_id = a.id
-            JOIN user_achievements ua ON ua.user_id = usa.user_id AND ua.achievement_id = a.id
-            WHERE usa.user_id = ?
-            ORDER BY usa.display_order
-            LIMIT 6`,
+            FROM user_achievements ua
+            JOIN achievements a ON ua.achievement_id = a.id
+            WHERE ua.user_id = ?
+            ORDER BY ua.unlocked_at DESC
+            LIMIT 12`,
             [userId]
         );
 
@@ -1083,7 +1042,7 @@ app.get('/api/community/profile/:userId', authenticateToken, async (req, res) =>
             followers: followers[0].count,
             following: following[0].count,
             isFollowing: isFollowing.length > 0,
-            showcaseAchievements: user.show_achievements ? showcaseAchievements : [],
+            showcaseAchievements: user.show_achievements ? unlockedAchievements : [],
             recentWorkouts: recentWorkouts,
             isOwnProfile: viewerUserId == userId
         });
@@ -1092,6 +1051,7 @@ app.get('/api/community/profile/:userId', authenticateToken, async (req, res) =>
         res.status(500).json({ message: 'Error loading profile.' });
     }
 });
+
 
 // Get user's own profile settings
 app.get('/api/user/profile', authenticateToken, async (req, res) => {
@@ -1439,7 +1399,8 @@ app.get('/api/community/feed', authenticateToken, async (req, res) => {
                 a.name as achievement_name,
                 a.icon as achievement_icon,
                 (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) as likes_count,
-                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id AND user_id = ?) as user_liked
+                0 as user_liked,
+                0 as comments_count
             FROM user_posts p
             JOIN user u ON p.user_id = u.id
             LEFT JOIN user_profiles up ON u.id = up.user_id
@@ -1454,15 +1415,14 @@ app.get('/api/community/feed', authenticateToken, async (req, res) => {
                     SELECT ?
                 )
             `;
+            query += ` ORDER BY p.created_at DESC LIMIT 50`;
+            const [posts] = await pool.execute(query, [userId, userId]);
+            return res.json(posts);
         } else {
-            query += ` WHERE p.user_id != ? `;
+            query += ` ORDER BY p.created_at DESC LIMIT 50`;
+            const [posts] = await pool.execute(query);
+            return res.json(posts);
         }
-
-        query += ` ORDER BY p.created_at DESC LIMIT 50`;
-
-        const [posts] = await pool.execute(query, followingOnly ? [userId, userId, userId] : [userId, userId]);
-
-        res.json(posts);
     } catch (error) {
         console.error('Error loading feed:', error);
         res.status(500).json({ message: 'Error loading feed.' });
