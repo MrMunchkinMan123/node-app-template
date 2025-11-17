@@ -1,34 +1,1789 @@
 <div class="page-header">
-    <h1>Community</h1>
-    <p>Connect with other fitness enthusiasts and join challenges.</p>
+    <h1>👥 Community</h1>
+    <p>Connect with fitness enthusiasts, share progress, and challenge friends!</p>
 </div>
 
-<div class="grid-2">
+<!-- Success message -->
+<div id="success-message" class="success-message" style="display: none;">
+    <span id="success-text"></span>
+</div>
+
+<!-- Tab Navigation -->
+<div class="community-tabs">
+    <button class="tab-btn active" onclick="switchTab('feed')">
+        <span>📰</span> Feed
+    </button>
+    <button class="tab-btn" onclick="switchTab('discover')">
+        <span>🔍</span> People
+    </button>
+    <button class="tab-btn" onclick="switchTab('challenges')">
+        <span>⚔️</span> Challenges
+        <span class="badge" id="challenges-badge" style="display: none;">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('leaderboard')">
+        <span>🏆</span> Leaderboard
+    </button>
+    <button class="tab-btn" onclick="switchTab('profile-settings')">
+        <span>⚙️</span> Settings
+    </button>
+</div>
+
+<!-- Feed Tab -->
+<div id="feed-tab" class="tab-content active">
+    <div class="feed-filter">
+        <button class="filter-toggle-btn" onclick="toggleFeedFilter()">
+            <span id="feed-filter-text">Showing: Everyone</span> 🔽
+        </button>
+    </div>
+    <div id="feed-container" class="feed-list">
+        <p style="text-align: center; padding: 2rem; color: #6b7280;">Loading feed...</p>
+    </div>
+</div>
+
+<!-- Discover Tab (includes following) -->
+<div id="discover-tab" class="tab-content">
+    <div class="discover-tabs">
+        <button class="discover-tab-btn active" onclick="switchDiscoverTab('search')">Search</button>
+        <button class="discover-tab-btn" onclick="switchDiscoverTab('following')">Following</button>
+    </div>
+    
+    <div id="discover-search" class="discover-content active">
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Search users..." onkeyup="searchUsers()">
+            <button onclick="searchUsers()">🔍 Search</button>
+        </div>
+        <div id="users-container" class="users-grid">
+            <p style="text-align: center; padding: 2rem; color: #6b7280;">Search for users to connect!</p>
+        </div>
+    </div>
+    
+    <div id="discover-following" class="discover-content">
+        <div id="following-container">
+            <p style="text-align: center; padding: 2rem; color: #6b7280;">Loading...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Challenges Tab -->
+<div id="challenges-tab" class="tab-content">
+    <div class="challenge-tabs">
+        <button class="challenge-tab-btn active" onclick="switchChallengeTab('received')">Received</button>
+        <button class="challenge-tab-btn" onclick="switchChallengeTab('sent')">Sent</button>
+    </div>
+    <div id="challenges-received" class="challenge-content active"></div>
+    <div id="challenges-sent" class="challenge-content"></div>
+</div>
+
+<!-- Leaderboard Tab -->
+<div id="leaderboard-tab" class="tab-content">
+    <div class="leaderboard-filters">
+        <button class="filter-btn active" onclick="loadLeaderboard('xp', event)">🏆 By XP</button>
+        <button class="filter-btn" onclick="loadLeaderboard('workouts', event)">💪 By Workouts</button>
+        <button class="filter-btn" onclick="loadLeaderboard('streak', event)">🔥 By Streak</button>
+    </div>
+    <div id="leaderboard-container">
+        <p style="text-align: center; padding: 2rem; color: #6b7280;">Loading leaderboard...</p>
+    </div>
+</div>
+
+<!-- Profile Settings Tab -->
+<div id="profile-settings-tab" class="tab-content">
     <div class="card">
-        <h3>Activity Feed</h3>
-        <div id="activity-feed">
-            <div class="feed-item">
-                <p style="text-align: center; color: #6b7280;">
-                    👥 Community features coming soon!<br><br>
-                    Share your workouts and achievements with friends.
-                </p>
+        <h2>Profile Settings</h2>
+        <button class="btn-secondary" onclick="viewOwnProfile()" style="margin-bottom: 1.5rem; width: 100%;">
+            👤 View My Profile
+        </button>
+        <form id="profile-form">
+            <div class="form-group">
+                <label>Display Name</label>
+                <input type="text" id="display-name" placeholder="Your name">
+            </div>
+            <div class="form-group">
+                <label>Bio</label>
+                <textarea id="bio" rows="3" placeholder="Tell us about yourself..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="location" placeholder="City, Country">
+            </div>
+            <div class="form-group">
+                <label>Fitness Goal</label>
+                <textarea id="fitness-goal" rows="2" placeholder="What are your fitness goals?"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Profile Color</label>
+                <input type="color" id="profile-color" value="#2563eb">
+            </div>
+            <div class="form-group">
+                <label>Privacy Settings</label>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="show-workouts" checked> Show my workouts
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-achievements" checked> Show my achievements
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-stats" checked> Show my statistics
+                    </label>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary">Save Profile</button>
+        </form>
+    </div>
+</div>
+
+<!-- User Profile Modal -->
+<div id="profile-modal" class="modal" style="display: none;">
+    <div class="modal-content profile-modal-content">
+        <div class="profile-header">
+            <button class="close-btn" onclick="closeProfileModal()">&times;</button>
+            <div class="profile-cover" id="profile-cover"></div>
+            <div class="profile-avatar">
+                <img id="profile-picture" src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff&size=120" alt="Profile">
+            </div>
+        </div>
+        <div class="profile-body">
+            <div class="profile-info">
+                <h2 id="profile-name">User Name</h2>
+                <p id="profile-bio" style="color: #6b7280; margin: 0.5rem 0;"></p>
+                <div class="profile-meta">
+                    <span id="profile-location"></span>
+                    <span id="profile-joined"></span>
+                </div>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="profile-stat">
+                    <span class="stat-value" id="profile-level">1</span>
+                    <span class="stat-label">Level</span>
+                </div>
+                <div class="profile-stat">
+                    <span class="stat-value" id="profile-followers">0</span>
+                    <span class="stat-label">Followers</span>
+                </div>
+                <div class="profile-stat">
+                    <span class="stat-value" id="profile-following">0</span>
+                    <span class="stat-label">Following</span>
+                </div>
+                <div class="profile-stat">
+                    <span class="stat-value" id="profile-workouts">0</span>
+                    <span class="stat-label">Workouts</span>
+                </div>
+            </div>
+
+            <div class="profile-actions" id="profile-actions">
+                <button class="btn-primary" id="follow-btn" onclick="toggleFollow()">Follow</button>
+                <button class="btn-secondary" id="challenge-btn" onclick="showChallengeWorkouts()">Challenge</button>
+            </div>
+
+            <div class="profile-section" id="achievements-section">
+                <h3>🏆 Achievements</h3>
+                <div class="achievements-showcase" id="profile-achievements">
+                    <p style="color: #6b7280;">No achievements to display</p>
+                </div>
+            </div>
+
+            <div class="profile-section" id="workouts-section">
+                <h3>💪 Recent Workouts</h3>
+                <div id="profile-workouts-list"></div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="card">
-        <h3>Active Challenges</h3>
-        <div id="challenges">
-            <div class="feed-item" style="text-align: center;">
-                <p style="color: #6b7280;">
-                    🎯 No active challenges<br><br>
-                    Join or create challenges to stay motivated!
-                </p>
+<!-- Challenge Message Modal -->
+<div id="message-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Challenge Message</h2>
+            <button class="close-btn" onclick="closeMessageModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <textarea id="challenge-message" rows="4" placeholder="Add an optional message..." style="width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; font-family: inherit;"></textarea>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <button class="btn-primary" onclick="confirmChallenge()" style="flex: 1;">Send Challenge</button>
+                <button class="btn-secondary" onclick="closeMessageModal()" style="flex: 1;">Cancel</button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Challenge Workout Selection Modal -->
+<div id="challenge-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Select Workout to Challenge</h2>
+            <button class="close-btn" onclick="closeChallengeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="challenge-workouts-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Workout Detail Modal -->
+<div id="workout-detail-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="workout-detail-title">Workout</h2>
+            <button class="close-btn" onclick="closeWorkoutDetailModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="workout-exercises-list"></div>
+            <button class="btn-primary" onclick="startChallengeWorkout()" style="width: 100%; margin-top: 1rem;">
+                Start Workout 🏋️
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.success-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--success);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    z-index: 10000;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.community-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+    color: #6b7280;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+}
+
+.tab-btn span:first-child {
+    font-size: 1.2rem;
+}
+
+.tab-btn:hover {
+    color: var(--primary);
+}
+
+.tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.tab-btn .badge {
+    background: var(--error);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.feed-filter {
+    margin-bottom: 1rem;
+}
+
+.filter-toggle-btn {
+    padding: 0.75rem 1.5rem;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.filter-toggle-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.discover-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.discover-tab-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.discover-tab-btn:hover {
+    border-color: var(--primary);
+}
+
+.discover-tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.discover-content {
+    display: none;
+}
+
+.discover-content.active {
+    display: block;
+}
+
+.challenge-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.challenge-tab-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.challenge-tab-btn:hover {
+    border-color: var(--primary);
+}
+
+.challenge-tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.challenge-content {
+    display: none;
+}
+
+.challenge-content.active {
+    display: block;
+}
+
+.search-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.search-bar button {
+    padding: 0.75rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="color"],
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.form-group input[type="color"] {
+    height: 50px;
+    cursor: pointer;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+}
+
+.feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.feed-item {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.feed-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.feed-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.feed-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.feed-user-info h4 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.feed-time {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.feed-content {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+.feed-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.feed-action-btn {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: all 0.3s;
+    font-size: 0.95rem;
+}
+
+.feed-action-btn:hover {
+    background: var(--background);
+    color: var(--primary);
+}
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.user-card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.user-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.user-card-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.user-card-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.user-card p {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin: 0 0 1rem 0;
+}
+
+.user-card-stats {
+    display: flex;
+    justify-content: space-around;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.user-stat {
+    text-align: center;
+}
+
+.user-stat-value {
+    display: block;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.user-stat-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.challenge-card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.challenge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.challenge-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-accepted {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.challenge-body h4 {
+    margin: 0 0 0.5rem 0;
+}
+
+.challenge-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.btn-accept {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-decline {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--error);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-cancel {
+    width: 100%;
+    padding: 0.75rem;
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.leaderboard-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.75rem 1.5rem;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.filter-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.filter-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.leaderboard-item {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.leaderboard-rank {
+    min-width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.rank-1 {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white;
+}
+
+.rank-2 {
+    background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+    color: white;
+}
+
+.rank-3 {
+    background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+    color: white;
+}
+
+.rank-other {
+    background: var(--background);
+    color: var(--text);
+}
+
+.leaderboard-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.leaderboard-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.leaderboard-info {
+    flex: 1;
+}
+
+.leaderboard-info h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.leaderboard-info p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.leaderboard-points {
+    text-align: right;
+}
+
+.points-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.points-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    overflow-y: auto;
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    margin: 2% auto;
+    padding: 2rem;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+    margin: 0;
+}
+
+.profile-modal-content {
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.profile-header {
+    position: relative;
+}
+
+.profile-cover {
+    height: 200px;
+}
+
+.profile-avatar {
+    position: absolute;
+    bottom: -60px;
+    left: 2rem;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid white;
+    overflow: hidden;
+    background: white;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.profile-body {
+    padding: 5rem 2rem 2rem 2rem;
+}
+
+.profile-info h2 {
+    margin: 0 0 0.5rem 0;
+}
+
+.profile-meta {
+    display: flex;
+    gap: 1rem;
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.profile-stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 10px;
+}
+
+.profile-stat .stat-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.profile-stat .stat-label {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.btn-primary {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    background: #1e40af;
+}
+
+.btn-secondary {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.profile-section {
+    margin-bottom: 2rem;
+}
+
+.profile-section h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.2rem;
+}
+
+.achievements-showcase {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.showcase-achievement {
+    background: var(--background);
+    padding: 1rem;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.showcase-achievement-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.showcase-achievement-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.workout-item {
+    background: var(--background);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.workout-item h4 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.workout-date {
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .community-tabs {
+        overflow-x: auto;
+    }
+    
+    .users-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .achievements-showcase {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
 
 <script>
-setActiveNav('community');
+let currentUserId = null;
+let currentTab = 'feed';
+let selectedUserId = null;
+let pendingChallengeWorkoutId = null;
+let currentChallengeWorkoutId = null;
+let showFollowingOnly = false;
+
+const iconMap = {
+    '[TARGET]': '🎯', '[MUSCLE]': '💪', '[FIRE]': '🔥', '[STAR]': '⭐',
+    '[TROPHY]': '🏆', '[CROWN]': '👑', '[GEM]': '💎', '[BOLT]': '⚡',
+    '[SHIELD]': '🛡️', '[STARS]': '🌟', '[MAP]': '🗺️', '[PAINT]': '🎨',
+    '[RAINBOW]': '🌈', '[WEIGHT]': '🏋️', '[POWER]': '💪', '[FLASH]': '⚡',
+    '[SHOE]': '👟', '[RUN]': '🏃', '[MEDAL]': '🎽', '[TIMER]': '⏱️',
+    '[CLOCK]': '⏰', '[ZAP]': '⚡', '[GLOW]': '🌟', '[LION]': '🦁',
+    '[BADGE]': '🎖️', '[DIAMOND]': '💎', '[KING]': '👑'
+};
+
+document.addEventListener('DOMContentLoaded', async function() {
+    setActiveNav('community');
+    await loadFeed();
+    await loadReceivedChallenges();
+    await loadSentChallenges();
+    await loadLeaderboard('xp');
+    await loadProfileSettings();
+    
+    document.getElementById('profile-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await saveProfileSettings();
+    });
+});
+
+function showSuccessMessage(message) {
+    const msgEl = document.getElementById('success-message');
+    document.getElementById('success-text').textContent = message;
+    msgEl.style.display = 'block';
+    setTimeout(() => {
+        msgEl.style.display = 'none';
+    }, 3000);
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.tab-btn').classList.add('active');
+    
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`${tab}-tab`).classList.add('active');
+}
+
+function switchDiscoverTab(tab) {
+    document.querySelectorAll('.discover-tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    document.querySelectorAll('.discover-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`discover-${tab}`).classList.add('active');
+    
+    if (tab === 'following') {
+        loadFollowing();
+    }
+}
+
+function switchChallengeTab(tab) {
+    document.querySelectorAll('.challenge-tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    document.querySelectorAll('.challenge-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`challenges-${tab}`).classList.add('active');
+}
+
+function toggleFeedFilter() {
+    showFollowingOnly = !showFollowingOnly;
+    document.getElementById('feed-filter-text').textContent = showFollowingOnly ? 'Showing: Following' : 'Showing: Everyone';
+    loadFeed();
+}
+
+async function loadProfileSettings() {
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch('/api/user/profile', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const profile = await response.json();
+            currentUserId = profile.user_id;
+            document.getElementById('display-name').value = profile.display_name || '';
+            document.getElementById('bio').value = profile.bio || '';
+            document.getElementById('location').value = profile.location || '';
+            document.getElementById('fitness-goal').value = profile.fitness_goal || '';
+            document.getElementById('profile-color').value = profile.profile_color || '#2563eb';
+            document.getElementById('show-workouts').checked = profile.show_workouts !== false;
+            document.getElementById('show-achievements').checked = profile.show_achievements !== false;
+            document.getElementById('show-stats').checked = profile.show_stats !== false;
+        }
+    } catch (error) {
+        console.error('Error loading profile settings:', error);
+    }
+}
+
+async function saveProfileSettings() {
+    const token = localStorage.getItem('jwtToken');
+    
+    const data = {
+        display_name: document.getElementById('display-name').value,
+        bio: document.getElementById('bio').value,
+        location: document.getElementById('location').value,
+        fitness_goal: document.getElementById('fitness-goal').value,
+        profile_color: document.getElementById('profile-color').value,
+        show_workouts: document.getElementById('show-workouts').checked,
+        show_achievements: document.getElementById('show-achievements').checked,
+        show_stats: document.getElementById('show-stats').checked
+    };
+    
+    try {
+        const response = await fetch('/api/user/profile', {
+            method: 'PUT',
+            headers: {
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            showSuccessMessage('Profile updated successfully! ✓');
+        }
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        alert('Error saving profile');
+    }
+}
+
+function viewOwnProfile() {
+    if (currentUserId) {
+        viewProfile(currentUserId);
+    }
+}
+
+async function loadFeed() {
+    const token = localStorage.getItem('jwtToken');
+    const container = document.getElementById('feed-container');
+    
+    try {
+        const response = await fetch(`/api/community/feed?following=${showFollowingOnly}`, {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const posts = await response.json();
+            
+            if (posts.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No posts yet. Follow some users to see their activity!</p>';
+                return;
+            }
+            
+            container.innerHTML = posts.map(post => `
+                <div class="feed-item">
+                    <div class="feed-header">
+                        <div class="feed-avatar" onclick="viewProfile(${post.user_id})" style="background: ${post.profile_color || '#2563eb'};">
+                            ${post.profile_picture ? `<img src="${post.profile_picture}" alt="${post.user_name}">` : post.user_name.charAt(0)}
+                        </div>
+                        <div class="feed-user-info">
+                            <h4>${post.user_name}</h4>
+                            <div class="feed-time">${formatTime(post.created_at)}</div>
+                        </div>
+                    </div>
+                    <div class="feed-content">
+                        ${post.content}
+                        ${post.achievement_name ? `
+                            <div style="background: var(--background); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                                <span style="font-size: 2rem;">${iconMap[post.achievement_icon] || '🏅'}</span>
+                                <strong>${post.achievement_name}</strong>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="feed-actions">
+                        <button class="feed-action-btn">
+                            ❤️ ${post.likes_count} ${post.likes_count === 1 ? 'Like' : 'Likes'}
+                        </button>
+                        <button class="feed-action-btn">
+                            💬 ${post.comments_count} Comments
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading feed:', error);
+        container.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--error);">Error loading feed.</p>';
+    }
+}
+
+async function searchUsers() {
+    const query = document.getElementById('search-input').value;
+    const token = localStorage.getItem('jwtToken');
+    const container = document.getElementById('users-container');
+    
+    if (query.length < 2) {
+        container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">Enter at least 2 characters to search.</p>';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/community/search?q=${encodeURIComponent(query)}`, {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const users = await response.json();
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No users found.</p>';
+                return;
+            }
+            
+            container.innerHTML = users.map(user => `
+                <div class="user-card" onclick="viewProfile(${user.id})">
+                    <div class="user-card-avatar" style="background: ${user.profile_color || '#2563eb'};">
+                        ${user.profile_picture ? `<img src="${user.profile_picture}" alt="${user.display_name}">` : user.display_name.charAt(0)}
+                    </div>
+                    <h3>${user.display_name}</h3>
+                    <p>${user.bio || 'No bio yet'}</p>
+                    <div class="user-card-stats">
+                        <div class="user-stat">
+                            <span class="user-stat-value">${user.followers_count}</span>
+                            <span class="user-stat-label">Followers</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error searching users:', error);
+    }
+}
+
+async function loadFollowing() {
+    const token = localStorage.getItem('jwtToken');
+    const container = document.getElementById('following-container');
+    
+    try {
+        const response = await fetch('/api/community/following', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const users = await response.json();
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">You are not following anyone yet.</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="users-grid">
+                    ${users.map(user => `
+                        <div class="user-card" onclick="viewProfile(${user.id})">
+                            <div class="user-card-avatar" style="background: #2563eb;">
+                                ${user.profile_picture ? `<img src="${user.profile_picture}" alt="${user.display_name}">` : user.display_name.charAt(0)}
+                            </div>
+                            <h3>${user.display_name}</h3>
+                            <p>${user.bio || 'No bio yet'}</p>
+                            <div class="user-card-stats">
+                                <div class="user-stat">
+                                    <span class="user-stat-value">${user.followers_count}</span>
+                                    <span class="user-stat-label">Followers</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading following:', error);
+    }
+}
+
+async function viewProfile(userId) {
+    selectedUserId = userId;
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch(`/api/community/profile/${userId}`, {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const profile = await response.json();
+            
+            document.getElementById('profile-cover').style.background = 
+                `linear-gradient(135deg, ${profile.user.profile_color} 0%, #8b5cf6 100%)`;
+            
+            document.getElementById('profile-name').textContent = profile.user.name;
+            document.getElementById('profile-bio').textContent = profile.user.bio || 'No bio yet';
+            document.getElementById('profile-location').textContent = profile.user.location ? `📍 ${profile.user.location}` : '';
+            document.getElementById('profile-joined').textContent = `📅 Joined ${formatDate(profile.user.joined)}`;
+            
+            document.getElementById('profile-level').textContent = profile.user.level;
+            document.getElementById('profile-followers').textContent = profile.followers;
+            document.getElementById('profile-following').textContent = profile.following;
+            document.getElementById('profile-workouts').textContent = profile.stats?.total_workouts || 0;
+            
+            const avatar = profile.user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.user.name)}&background=${profile.user.profile_color.substring(1)}&color=fff&size=120`;
+            document.getElementById('profile-picture').src = avatar;
+            
+            const followBtn = document.getElementById('follow-btn');
+            if (profile.isOwnProfile) {
+                document.getElementById('profile-actions').style.display = 'none';
+            } else {
+                document.getElementById('profile-actions').style.display = 'flex';
+                followBtn.textContent = profile.isFollowing ? 'Unfollow' : 'Follow';
+                followBtn.style.background = profile.isFollowing ? '#6b7280' : 'var(--primary)';
+            }
+            
+            const achievementsContainer = document.getElementById('profile-achievements');
+            if (profile.showcaseAchievements.length > 0) {
+                achievementsContainer.innerHTML = profile.showcaseAchievements.map(ach => `
+                    <div class="showcase-achievement">
+                        <div class="showcase-achievement-icon">${iconMap[ach.icon] || '🏅'}</div>
+                        <div class="showcase-achievement-name">${ach.name}</div>
+                    </div>
+                `).join('');
+            } else {
+                achievementsContainer.innerHTML = '<p style="color: #6b7280;">No achievements to display</p>';
+            }
+            
+            const workoutsContainer = document.getElementById('profile-workouts-list');
+            if (profile.recentWorkouts.length > 0) {
+                workoutsContainer.innerHTML = profile.recentWorkouts.map(w => `
+                    <div class="workout-item">
+                        <h4>${w.workout_name}</h4>
+                        <span class="workout-date">${formatDate(w.completed_at)}</span>
+                    </div>
+                `).join('');
+            } else {
+                workoutsContainer.innerHTML = '<p style="color: #6b7280;">No recent workouts</p>';
+            }
+            
+            document.getElementById('profile-modal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
+
+function closeProfileModal() {
+    document.getElementById('profile-modal').style.display = 'none';
+}
+
+async function toggleFollow() {
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch(`/api/community/follow/${selectedUserId}`, {
+            method: 'POST',
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const followBtn = document.getElementById('follow-btn');
+            followBtn.textContent = data.following ? 'Unfollow' : 'Follow';
+            followBtn.style.background = data.following ? '#6b7280' : 'var(--primary)';
+            
+            viewProfile(selectedUserId);
+        }
+    } catch (error) {
+        console.error('Error toggling follow:', error);
+    }
+}
+
+async function showChallengeWorkouts() {
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch('/api/workouts', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const workouts = await response.json();
+            
+            document.getElementById('challenge-workouts-list').innerHTML = workouts.map(w => `
+                <div class="workout-item" style="cursor: pointer;" onclick="selectChallengeWorkout(${w.id})">
+                    <h4>${w.name}</h4>
+                    <p style="color: #6b7280; margin: 0.5rem 0 0 0;">${w.exercises.length} exercises</p>
+                </div>
+            `).join('');
+            
+            document.getElementById('profile-modal').style.display = 'none';
+            document.getElementById('challenge-modal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading workouts:', error);
+    }
+}
+
+function selectChallengeWorkout(workoutId) {
+    pendingChallengeWorkoutId = workoutId;
+    document.getElementById('challenge-modal').style.display = 'none';
+    document.getElementById('message-modal').style.display = 'block';
+}
+
+function closeChallengeModal() {
+    document.getElementById('challenge-modal').style.display = 'none';
+}
+
+function closeMessageModal() {
+    document.getElementById('message-modal').style.display = 'none';
+    document.getElementById('challenge-message').value = '';
+    pendingChallengeWorkoutId = null;
+}
+
+async function confirmChallenge() {
+    const token = localStorage.getItem('jwtToken');
+    const message = document.getElementById('challenge-message').value;
+    
+    try {
+        const response = await fetch('/api/community/challenge', {
+            method: 'POST',
+            headers: { 
+                'Authorization': token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                targetUserId: selectedUserId,
+                workoutSessionId: pendingChallengeWorkoutId,
+                message: message
+            })
+        });
+        
+        if (response.ok) {
+            showSuccessMessage('Challenge sent! 🔥');
+            closeMessageModal();
+        }
+    } catch (error) {
+        console.error('Error sending challenge:', error);
+    }
+}
+
+function closeWorkoutDetailModal() {
+    document.getElementById('workout-detail-modal').style.display = 'none';
+    currentChallengeWorkoutId = null;
+}
+
+async function viewChallengeWorkout(workoutSessionId, workoutName) {
+    const token = localStorage.getItem('jwtToken');
+    currentChallengeWorkoutId = workoutSessionId;
+    
+    try {
+        const response = await fetch('/api/workouts', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const workouts = await response.json();
+            const workout = workouts.find(w => w.id === workoutSessionId);
+            
+            if (workout) {
+                document.getElementById('workout-detail-title').textContent = workoutName;
+                document.getElementById('workout-exercises-list').innerHTML = `
+                    <div style="background: var(--background); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        ${workout.exercises.map((ex, index) => `
+                            <div style="padding: 0.75rem; border-bottom: 1px solid var(--border); ${index === workout.exercises.length - 1 ? 'border-bottom: none;' : ''}">
+                                <h4 style="margin: 0 0 0.5rem 0;">${index + 1}. ${ex.name}</h4>
+                                <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">
+                                    ${ex.sets ? `${ex.sets} sets` : ''} 
+                                    ${ex.reps ? `× ${ex.reps} reps` : ''}
+                                    ${ex.weight ? `@ ${ex.weight} lbs` : ''}
+                                    ${ex.duration ? `${ex.duration} minutes` : ''}
+                                    ${ex.distance ? `${ex.distance} miles` : ''}
+                                </p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                document.getElementById('workout-detail-modal').style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading workout:', error);
+    }
+}
+
+function startChallengeWorkout() {
+    if (currentChallengeWorkoutId) {
+        window.location.href = `/workout?challenge=${currentChallengeWorkoutId}`;
+    }
+}
+
+async function loadReceivedChallenges() {
+    const token = localStorage.getItem('jwtToken');
+    const container = document.getElementById('challenges-received');
+    
+    try {
+        const response = await fetch('/api/community/challenges/received', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const challenges = await response.json();
+            
+            const pending = challenges.filter(c => c.status === 'pending').length;
+            const badge = document.getElementById('challenges-badge');
+            if (pending > 0) {
+                badge.textContent = pending;
+                badge.style.display = 'inline-block';
+            }
+            
+            if (challenges.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No challenges received yet.</p>';
+                return;
+            }
+            
+            container.innerHTML = challenges.map(c => `
+                <div class="challenge-card">
+                    <div class="challenge-header">
+                        <h3>${c.challenger_name} challenged you!</h3>
+                        <span class="challenge-status status-${c.status}">${c.status}</span>
+                    </div>
+                    <div class="challenge-body">
+                        <h4>💪 ${c.workout_name}</h4>
+                        ${c.message ? `<p>${c.message}</p>` : ''}
+                        <p style="color: #6b7280; font-size: 0.85rem; margin-top: 0.5rem;">
+                            Expires: ${formatDate(c.expires_at)}
+                        </p>
+                    </div>
+                    ${c.status === 'pending' ? `
+                        <div class="challenge-actions">
+                            <button class="btn-accept" onclick="respondToChallenge(${c.id}, 'accept')">Accept</button>
+                            <button class="btn-decline" onclick="respondToChallenge(${c.id}, 'decline')">Decline</button>
+                        </div>
+                    ` : c.status === 'accepted' ? `
+                        <button class="btn-primary" onclick="viewChallengeWorkout(${c.workout_session_id}, '${c.workout_name}')" style="width: 100%; margin-top: 1rem;">
+                            View Workout 👀
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading challenges:', error);
+    }
+}
+
+async function loadSentChallenges() {
+    const token = localStorage.getItem('jwtToken');
+    const container = document.getElementById('challenges-sent');
+    
+    try {
+        const response = await fetch('/api/community/challenges/sent', {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const challenges = await response.json();
+            
+            if (challenges.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #6b7280;">No challenges sent yet.</p>';
+                return;
+            }
+            
+            container.innerHTML = challenges.map(c => `
+                <div class="challenge-card">
+                    <div class="challenge-header">
+                        <h3>You challenged ${c.challenged_name}</h3>
+                        <span class="challenge-status status-${c.status}">${c.status}</span>
+                    </div>
+                    <div class="challenge-body">
+                        <h4>💪 ${c.workout_name}</h4>
+                        ${c.message ? `<p>${c.message}</p>` : ''}
+                        <p style="color: #6b7280; font-size: 0.85rem; margin-top: 0.5rem;">
+                            Expires: ${formatDate(c.expires_at)}
+                        </p>
+                    </div>
+                    ${c.status === 'pending' ? `
+                        <button class="btn-cancel" onclick="cancelChallenge(${c.id})">Cancel Challenge</button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading sent challenges:', error);
+    }
+}
+
+async function respondToChallenge(challengeId, action) {
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch(`/api/community/challenge/${challengeId}/${action}`, {
+            method: 'POST',
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            showSuccessMessage(`Challenge ${action}ed! ✓`);
+            loadReceivedChallenges();
+        }
+    } catch (error) {
+        console.error('Error responding to challenge:', error);
+    }
+}
+
+async function cancelChallenge(challengeId) {
+    const token = localStorage.getItem('jwtToken');
+    
+    try {
+        const response = await fetch(`/api/community/challenge/${challengeId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            showSuccessMessage('Challenge cancelled! ✓');
+            loadSentChallenges();
+        }
+    } catch (error) {
+        console.error('Error cancelling challenge:', error);
+    }
+}
+
+async function loadLeaderboard(criteria, event) {
+    const token = localStorage.getItem('jwtToken');
+    const container = document.getElementById('leaderboard-container');
+    
+    if (event) {
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+    
+    try {
+        const response = await fetch(`/api/community/leaderboard/${criteria}`, {
+            headers: { 'Authorization': token }
+        });
+        
+        if (response.ok) {
+            const users = await response.json();
+            
+            let valueLabel = 'XP';
+            let getValue = (user) => user.total_points || 0;
+            
+            if (criteria === 'workouts') {
+                valueLabel = 'Workouts';
+                getValue = (user) => user.total_workouts || 0;
+            } else if (criteria === 'streak') {
+                valueLabel = 'Streak';
+                getValue = (user) => user.current_streak || 0;
+            }
+            
+            container.innerHTML = `
+                <div class="leaderboard-list">
+                    ${users.map((user, index) => {
+                        const rank = index + 1;
+                        let rankClass = 'rank-other';
+                        if (rank === 1) rankClass = 'rank-1';
+                        else if (rank === 2) rankClass = 'rank-2';
+                        else if (rank === 3) rankClass = 'rank-3';
+                        
+                        return `
+                            <div class="leaderboard-item" onclick="viewProfile(${user.id})">
+                                <div class="leaderboard-rank ${rankClass}">${rank}</div>
+                                <div class="leaderboard-avatar" style="background: ${user.profile_color || '#2563eb'};">
+                                    ${user.profile_picture ? `<img src="${user.profile_picture}" alt="${user.display_name}">` : user.display_name.charAt(0)}
+                                </div>
+                                <div class="leaderboard-info">
+                                    <h4>${user.display_name}</h4>
+                                    <p>${user.total_workouts || 0} workouts • ${user.total_exercises || 0} exercises</p>
+                                </div>
+                                <div class="leaderboard-points">
+                                    <span class="points-value">${getValue(user)}</span>
+                                    <span class="points-label">${valueLabel}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading leaderboard:', error);
+    }
+}
+
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return date.toLocaleDateString();
+}
+
+function formatDate(timestamp) {
+    return new Date(timestamp).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    });
+}
+
+window.onclick = function(event) {
+    if (event.target.id === 'profile-modal') {
+        closeProfileModal();
+    }
+    if (event.target.id === 'challenge-modal') {
+        closeChallengeModal();
+    }
+    if (event.target.id === 'message-modal') {
+        closeMessageModal();
+    }
+    if (event.target.id === 'workout-detail-modal') {
+        closeWorkoutDetailModal();
+    }
+}
 </script>

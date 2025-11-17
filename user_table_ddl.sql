@@ -1,6 +1,7 @@
 USE cis440fall2025team5;
 
--- Drop all existing tables in correct order
+-- Drop all existing tables in correct order 
+--(not updated)
 DROP TABLE IF EXISTS user_achievements;
 DROP TABLE IF EXISTS achievements;
 DROP TABLE IF EXISTS workout_completions;
@@ -245,5 +246,148 @@ INSERT INTO achievements (name, description, icon, category, requirement_type, r
 ('Monthly Legend', 'Complete 30 workouts this month', '[KING]', 'workout', 'count', 30, 'monthly', 300);
 
 -- Show all tables
+-- User profiles and settings
+CREATE TABLE user_profiles (
+    user_id INT PRIMARY KEY,
+    profile_picture VARCHAR(255) DEFAULT NULL,
+    cover_image VARCHAR(255) DEFAULT NULL,
+    profile_color VARCHAR(7) DEFAULT '#2563eb'
+    bio TEXT DEFAULT NULL,
+    location VARCHAR(100) DEFAULT NULL,
+    fitness_goal TEXT DEFAULT NULL,
+    privacy_level ENUM('public', 'friends', 'private') DEFAULT 'public',
+    show_workouts BOOLEAN DEFAULT TRUE,
+    show_achievements BOOLEAN DEFAULT TRUE,
+    show_stats BOOLEAN DEFAULT TRUE,
+    show_progress BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
+
+-- Followers/Following system
+CREATE TABLE user_follows (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    follower_id INT NOT NULL,
+    following_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (follower_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (following_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_follow (follower_id, following_id),
+    INDEX idx_follower (follower_id),
+    INDEX idx_following (following_id)
+);
+
+-- Workout challenges
+CREATE TABLE workout_challenges (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    challenger_id INT NOT NULL,
+    challenged_id INT NOT NULL,
+    workout_session_id INT NOT NULL,
+    message TEXT DEFAULT NULL,
+    status ENUM('pending', 'accepted', 'declined', 'completed', 'expired') DEFAULT 'pending',
+    challenger_completed BOOLEAN DEFAULT FALSE,
+    challenged_completed BOOLEAN DEFAULT FALSE,
+    challenger_time INT DEFAULT NULL,
+    challenged_time INT DEFAULT NULL,
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (challenger_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (challenged_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (workout_session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    INDEX idx_challenged (challenged_id, status),
+    INDEX idx_challenger (challenger_id, status)
+);
+
+-- Activity feed (posts, updates, achievements)
+CREATE TABLE user_posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    post_type ENUM('workout', 'achievement', 'milestone', 'status') NOT NULL,
+    content TEXT NOT NULL,
+    workout_session_id INT DEFAULT NULL,
+    achievement_id INT DEFAULT NULL,
+    likes_count INT DEFAULT 0,
+    comments_count INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (workout_session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE SET NULL,
+    INDEX idx_user_created (user_id, created_at),
+    INDEX idx_created (created_at)
+);
+
+-- Post likes
+CREATE TABLE post_likes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES user_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_like (post_id, user_id),
+    INDEX idx_post (post_id)
+);
+
+-- Post comments
+CREATE TABLE post_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES user_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    INDEX idx_post_created (post_id, created_at)
+);
+
+-- User displayed achievements (customizable showcase)
+CREATE TABLE user_showcase_achievements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    achievement_id INT NOT NULL,
+    display_order INT DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (achievement_id) REFERENCES user_achievements(achievement_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_showcase (user_id, achievement_id),
+    INDEX idx_user_order (user_id, display_order)
+);
+
+-- Notifications
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type ENUM('follow', 'challenge', 'like', 'comment', 'achievement', 'milestone') NOT NULL,
+    from_user_id INT DEFAULT NULL,
+    reference_id INT DEFAULT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_user_id) REFERENCES user(id) ON DELETE CASCADE,
+    INDEX idx_user_read (user_id, is_read, created_at)
+);
+
+-- Leaderboards (weekly/monthly)
+CREATE TABLE leaderboards (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    period_type ENUM('weekly', 'monthly', 'all_time') NOT NULL,
+    period_start DATE NOT NULL,
+    workouts_count INT DEFAULT 0,
+    total_exercises INT DEFAULT 0,
+    total_points INT DEFAULT 0,
+    total_weight DECIMAL(12,2) DEFAULT 0,
+    total_distance DECIMAL(10,2) DEFAULT 0,
+    total_time INT DEFAULT 0,
+    rank_position INT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_period (user_id, period_type, period_start),
+    INDEX idx_period_rank (period_type, period_start, rank_position)
+);
+
 SHOW TABLES;
 

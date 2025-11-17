@@ -979,6 +979,569 @@ app.get('/api/achievements', authenticateToken, async (req, res) => {
     }
 });
 
+//////////////////////////////////////
+// COMMUNITY API ROUTES
+//////////////////////////////////////
+
+// Get user profile (public view)
+app.get('/api/community/profile/:userId', authenticateToken, async (req, res) => {
+    const userId = req.params.userId;
+    const userEmail = req.user.email;
+
+    try {
+        const [viewerRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const viewerUserId = viewerRows[0].id;
+
+        const [profile] = await pool.execute(
+            `SELECT 
+                u.id, u.display_name, u.email, u.created_at,
+                up.profile_picture, up.bio, up.location, up.fitness_goal, up.profile_color,
+                up.privacy_level, up.show_workouts, up.show_achievements, up.show_stats
+            FROM user u
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            WHERE u.id = ?`,
+            [userId]
+        );
+
+        if (profile.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const user = profile[0];
+
+        const [stats] = await pool.execute(
+            'SELECT * FROM user_progress_stats WHERE user_id = ?',
+            [userId]
+        );
+
+        const [achievements] = await pool.execute(
+            `SELECT SUM(a.points) as total_points
+            FROM user_achievements ua
+            JOIN achievements a ON ua.achievement_id = a.id
+            WHERE ua.user_id = ?`,
+            [userId]
+        );
+        
+        const points = achievements[0].total_points || 0;
+        const level = Math.floor(points / 100) + 1;
+
+        const [followers] = await pool.execute(
+            'SELECT COUNT(*) as count FROM user_follows WHERE following_id = ?',
+            [userId]
+        );
+        const [following] = await pool.execute(
+            'SELECT COUNT(*) as count FROM user_follows WHERE follower_id = ?',
+            [userId]
+        );
+
+        const [isFollowing] = await pool.execute(
+            'SELECT id FROM user_follows WHERE follower_id = ? AND following_id = ?',
+            [viewerUserId, userId]
+        );
+
+        const [showcaseAchievements] = await pool.execute(
+            `SELECT a.*, ua.unlocked_at
+            FROM user_showcase_achievements usa
+            JOIN achievements a ON usa.achievement_id = a.id
+            JOIN user_achievements ua ON ua.user_id = usa.user_id AND ua.achievement_id = a.id
+            WHERE usa.user_id = ?
+            ORDER BY usa.display_order
+            LIMIT 6`,
+            [userId]
+        );
+
+        let recentWorkouts = [];
+        if (user.show_workouts) {
+            [recentWorkouts] = await pool.execute(
+                `SELECT workout_name, completed_at
+                FROM workout_completions
+                WHERE user_id = ?
+                ORDER BY completed_at DESC
+                LIMIT 5`,
+                [userId]
+            );
+        }
+
+        res.json({
+            user: {
+                id: user.id,
+                name: user.display_name,
+                email: user.email,
+                profile_picture: user.profile_picture,
+                profile_color: user.profile_color || '#2563eb',
+                bio: user.bio,
+                location: user.location,
+                fitness_goal: user.fitness_goal,
+                joined: user.created_at,
+                level: level,
+                points: points
+            },
+            stats: user.show_stats ? stats[0] : null,
+            followers: followers[0].count,
+            following: following[0].count,
+            isFollowing: isFollowing.length > 0,
+            showcaseAchievements: user.show_achievements ? showcaseAchievements : [],
+            recentWorkouts: recentWorkouts,
+            isOwnProfile: viewerUserId == userId
+        });
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        res.status(500).json({ message: 'Error loading profile.' });
+    }
+});
+
+// Get user's own profile settings
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+    
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id, display_name FROM user WHERE email = ?',
+            [userEmail]
+        );
+        
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        
+        const userId = userRows[0].id;
+        
+        const [profile] = await pool.execute(
+            'SELECT * FROM user_profiles WHERE user_id = ?',
+            [userId]
+        );
+        
+        if (profile.length === 0) {
+            await pool.execute(
+                'INSERT INTO user_profiles (user_id) VALUES (?)',
+                [userId]
+            );
+            return res.json({
+                user_id: userId,
+                display_name: userRows[0].display_name,
+                bio: null,
+                location: null,
+                fitness_goal: null,
+                profile_color: '#2563eb',
+                show_workouts: true,
+                show_achievements: true,
+                show_stats: true
+            });
+        }
+        
+        res.json({
+            ...profile[0],
+            display_name: userRows[0].display_name
+        });
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        res.status(500).json({ message: 'Error loading profile.' });
+    }
+});
+
+// Update user's profile settings
+app.put('/api/user/profile', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+    const { display_name, bio, location, fitness_goal, profile_color, show_workouts, show_achievements, show_stats } = req.body;
+    
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        
+        const userId = userRows[0].id;
+        
+        if (display_name) {
+            await pool.execute(
+                'UPDATE user SET display_name = ? WHERE id = ?',
+                [display_name, userId]
+            );
+        }
+        
+        await pool.execute(
+            `INSERT INTO user_profiles (user_id, bio, location, fitness_goal, profile_color, show_workouts, show_achievements, show_stats)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                bio = VALUES(bio),
+                location = VALUES(location),
+                fitness_goal = VALUES(fitness_goal),
+                profile_color = VALUES(profile_color),
+                show_workouts = VALUES(show_workouts),
+                show_achievements = VALUES(show_achievements),
+                show_stats = VALUES(show_stats)`,
+            [userId, bio, location, fitness_goal, profile_color, show_workouts, show_achievements, show_stats]
+        );
+        
+        res.json({ message: 'Profile updated successfully!' });
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ message: 'Error updating profile.' });
+    }
+});
+
+// Follow/Unfollow user
+app.post('/api/community/follow/:userId', authenticateToken, async (req, res) => {
+    const targetUserId = req.params.userId;
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        const [existing] = await pool.execute(
+            'SELECT id FROM user_follows WHERE follower_id = ? AND following_id = ?',
+            [userId, targetUserId]
+        );
+
+        if (existing.length > 0) {
+            await pool.execute(
+                'DELETE FROM user_follows WHERE follower_id = ? AND following_id = ?',
+                [userId, targetUserId]
+            );
+            res.json({ message: 'Unfollowed successfully', following: false });
+        } else {
+            await pool.execute(
+                'INSERT INTO user_follows (follower_id, following_id) VALUES (?, ?)',
+                [userId, targetUserId]
+            );
+
+            await pool.execute(
+                `INSERT INTO notifications (user_id, type, from_user_id, message)
+                VALUES (?, 'follow', ?, 'started following you')`,
+                [targetUserId, userId]
+            );
+
+            res.json({ message: 'Followed successfully', following: true });
+        }
+    } catch (error) {
+        console.error('Error following user:', error);
+        res.status(500).json({ message: 'Error following user.' });
+    }
+});
+
+// Get following list
+app.get('/api/community/following', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        const [following] = await pool.execute(
+            `SELECT u.id, u.display_name, up.profile_picture, up.bio,
+                (SELECT COUNT(*) FROM user_follows WHERE following_id = u.id) as followers_count
+            FROM user_follows uf
+            JOIN user u ON uf.following_id = u.id
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            WHERE uf.follower_id = ?
+            ORDER BY uf.created_at DESC`,
+            [userId]
+        );
+
+        res.json(following);
+    } catch (error) {
+        console.error('Error loading following:', error);
+        res.status(500).json({ message: 'Error loading following.' });
+    }
+});
+
+// Send workout challenge
+app.post('/api/community/challenge', authenticateToken, async (req, res) => {
+    const { targetUserId, workoutSessionId, message } = req.body;
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+
+        await pool.execute(
+            `INSERT INTO workout_challenges 
+            (challenger_id, challenged_id, workout_session_id, message, expires_at)
+            VALUES (?, ?, ?, ?, ?)`,
+            [userId, targetUserId, workoutSessionId, message, expiresAt]
+        );
+
+        const [workout] = await pool.execute(
+            'SELECT workout_name FROM workout_sessions WHERE id = ?',
+            [workoutSessionId]
+        );
+
+        await pool.execute(
+            `INSERT INTO notifications (user_id, type, from_user_id, reference_id, message)
+            VALUES (?, 'challenge', ?, ?, ?)`,
+            [targetUserId, userId, workoutSessionId, `challenged you to: ${workout[0].workout_name}`]
+        );
+
+        res.status(201).json({ message: 'Challenge sent!' });
+    } catch (error) {
+        console.error('Error sending challenge:', error);
+        res.status(500).json({ message: 'Error sending challenge.' });
+    }
+});
+
+// Get user's challenges (received)
+app.get('/api/community/challenges/received', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        const [challenges] = await pool.execute(
+            `SELECT 
+                c.*,
+                ws.workout_name,
+                challenger.display_name as challenger_name,
+                challenged.display_name as challenged_name
+            FROM workout_challenges c
+            JOIN workout_sessions ws ON c.workout_session_id = ws.id
+            JOIN user challenger ON c.challenger_id = challenger.id
+            JOIN user challenged ON c.challenged_id = challenged.id
+            WHERE c.challenged_id = ?
+            AND c.status != 'expired'
+            ORDER BY c.created_at DESC`,
+            [userId]
+        );
+
+        res.json(challenges);
+    } catch (error) {
+        console.error('Error loading challenges:', error);
+        res.status(500).json({ message: 'Error loading challenges.' });
+    }
+});
+
+// Get user's challenges (sent)
+app.get('/api/community/challenges/sent', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        const [challenges] = await pool.execute(
+            `SELECT 
+                c.*,
+                ws.workout_name,
+                challenger.display_name as challenger_name,
+                challenged.display_name as challenged_name
+            FROM workout_challenges c
+            JOIN workout_sessions ws ON c.workout_session_id = ws.id
+            JOIN user challenger ON c.challenger_id = challenger.id
+            JOIN user challenged ON c.challenged_id = challenged.id
+            WHERE c.challenger_id = ?
+            AND c.status != 'expired'
+            ORDER BY c.created_at DESC`,
+            [userId]
+        );
+
+        res.json(challenges);
+    } catch (error) {
+        console.error('Error loading challenges:', error);
+        res.status(500).json({ message: 'Error loading challenges.' });
+    }
+});
+
+// Accept/Decline challenge
+app.post('/api/community/challenge/:id/:action', authenticateToken, async (req, res) => {
+    const challengeId = req.params.id;
+    const action = req.params.action;
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        const status = action === 'accept' ? 'accepted' : 'declined';
+
+        await pool.execute(
+            'UPDATE workout_challenges SET status = ? WHERE id = ? AND challenged_id = ?',
+            [status, challengeId, userId]
+        );
+
+        res.json({ message: `Challenge ${status}!` });
+    } catch (error) {
+        console.error('Error updating challenge:', error);
+        res.status(500).json({ message: 'Error updating challenge.' });
+    }
+});
+
+// Cancel challenge (for sender)
+app.delete('/api/community/challenge/:id', authenticateToken, async (req, res) => {
+    const challengeId = req.params.id;
+    const userEmail = req.user.email;
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        await pool.execute(
+            'DELETE FROM workout_challenges WHERE id = ? AND challenger_id = ?',
+            [challengeId, userId]
+        );
+
+        res.json({ message: 'Challenge cancelled!' });
+    } catch (error) {
+        console.error('Error cancelling challenge:', error);
+        res.status(500).json({ message: 'Error cancelling challenge.' });
+    }
+});
+
+// Get community feed
+app.get('/api/community/feed', authenticateToken, async (req, res) => {
+    const userEmail = req.user.email;
+    const followingOnly = req.query.following === 'true';
+
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const userId = userRows[0].id;
+
+        let query = `
+            SELECT 
+                p.*,
+                u.display_name as user_name,
+                up.profile_picture,
+                up.profile_color,
+                a.name as achievement_name,
+                a.icon as achievement_icon,
+                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) as likes_count,
+                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id AND user_id = ?) as user_liked
+            FROM user_posts p
+            JOIN user u ON p.user_id = u.id
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            LEFT JOIN achievements a ON p.achievement_id = a.id
+        `;
+
+        if (followingOnly) {
+            query += `
+                WHERE p.user_id IN (
+                    SELECT following_id FROM user_follows WHERE follower_id = ?
+                    UNION
+                    SELECT ?
+                )
+            `;
+        } else {
+            query += ` WHERE p.user_id != ? `;
+        }
+
+        query += ` ORDER BY p.created_at DESC LIMIT 50`;
+
+        const [posts] = await pool.execute(query, followingOnly ? [userId, userId, userId] : [userId, userId]);
+
+        res.json(posts);
+    } catch (error) {
+        console.error('Error loading feed:', error);
+        res.status(500).json({ message: 'Error loading feed.' });
+    }
+});
+
+// Search users
+app.get('/api/community/search', authenticateToken, async (req, res) => {
+    const query = req.query.q || '';
+    const userEmail = req.user.email;
+
+    try {
+        const [currentUser] = await pool.execute(
+            'SELECT id FROM user WHERE email = ?',
+            [userEmail]
+        );
+        const currentUserId = currentUser[0].id;
+
+        const [users] = await pool.execute(
+            `SELECT 
+                u.id, u.display_name, u.email,
+                up.profile_picture, up.bio, up.profile_color,
+                (SELECT COUNT(*) FROM user_follows WHERE following_id = u.id) as followers_count
+            FROM user u
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            WHERE (u.display_name LIKE ? OR u.email LIKE ?)
+            AND u.id != ?
+            ORDER BY followers_count DESC
+            LIMIT 20`,
+            [`%${query}%`, `%${query}%`, currentUserId]
+        );
+
+        res.json(users);
+    } catch (error) {
+        console.error('Error searching users:', error);
+        res.status(500).json({ message: 'Error searching users.' });
+    }
+});
+
+// Get leaderboard
+app.get('/api/community/leaderboard/:criteria', authenticateToken, async (req, res) => {
+    const criteria = req.params.criteria; // 'xp', 'workouts', 'streak'
+
+    try {
+        let orderBy = 'total_points DESC';
+        
+        if (criteria === 'workouts') {
+            orderBy = 'ups.total_workouts DESC';
+        } else if (criteria === 'streak') {
+            orderBy = 'ups.current_streak DESC, ups.longest_streak DESC';
+        }
+
+        const [leaderboard] = await pool.execute(
+            `SELECT 
+                u.id, u.display_name,
+                up.profile_picture, up.profile_color,
+                ups.total_workouts,
+                ups.total_exercises,
+                ups.current_streak,
+                ups.longest_streak,
+                COALESCE(SUM(a.points), 0) as total_points
+            FROM user u
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            LEFT JOIN user_progress_stats ups ON u.id = ups.user_id
+            LEFT JOIN user_achievements ua ON u.id = ua.user_id
+            LEFT JOIN achievements a ON ua.achievement_id = a.id
+            GROUP BY u.id
+            ORDER BY ${orderBy}
+            LIMIT 100`,
+            []
+        );
+
+        res.json(leaderboard);
+    } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        res.status(500).json({ message: 'Error loading leaderboard.' });
+    }
+});
+
 
 // Start the server  <-- This stays here
 app.listen(port, () => {
