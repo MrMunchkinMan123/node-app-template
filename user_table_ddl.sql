@@ -1,8 +1,6 @@
 USE cis440fall2025team5;
 
--- Drop all existing tables in correct order (not updated)
-DROP TABLE IF EXISTS `post_likes`;
-DROP TABLE IF EXISTS `post_comments`;
+-- Drop all existing tables in correct order 
 DROP TABLE IF EXISTS `user_posts`;
 DROP TABLE IF EXISTS `user_showcase_achievements`;
 DROP TABLE IF EXISTS `user_achievements`;
@@ -18,9 +16,6 @@ DROP TABLE IF EXISTS `leaderboards`;
 DROP TABLE IF EXISTS `user_follows`;
 DROP TABLE IF EXISTS `user_profiles`;
 DROP TABLE IF EXISTS `workout_sessions`;
-DROP TABLE IF EXISTS `exercise_history_old`;
-DROP TABLE IF EXISTS `users_logins`;
-DROP TABLE IF EXISTS `users`;
 DROP TABLE IF EXISTS `user`;
 
 -- User table
@@ -253,7 +248,6 @@ INSERT INTO achievements (name, description, icon, category, requirement_type, r
 ('Month Champion', 'Complete 20 workouts this month', '[DIAMOND]', 'workout', 'count', 20, 'monthly', 200),
 ('Monthly Legend', 'Complete 30 workouts this month', '[KING]', 'workout', 'count', 30, 'monthly', 300);
 
--- Show all tables
 -- User profiles and settings
 CREATE TABLE user_profiles (
     user_id INT PRIMARY KEY,
@@ -308,46 +302,18 @@ CREATE TABLE workout_challenges (
     INDEX idx_challenger (challenger_id, status)
 );
 
--- Activity feed (posts, updates, achievements)
+-- Community feed posts - FIXED WITH FOREIGN KEY
 CREATE TABLE user_posts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    post_type ENUM('workout', 'achievement', 'milestone', 'status') NOT NULL,
-    content TEXT NOT NULL,
-    workout_session_id INT DEFAULT NULL,
-    achievement_id INT DEFAULT NULL,
-    likes_count INT DEFAULT 0,
-    comments_count INT DEFAULT 0,
+    post_type ENUM('workout', 'achievement') NOT NULL,
+    content TEXT,
+    achievement_id INT NULL,
+    workout_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-    FOREIGN KEY (workout_session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
-    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE SET NULL,
-    INDEX idx_user_created (user_id, created_at),
-    INDEX idx_created (created_at)
-);
-
--- Post likes
-CREATE TABLE post_likes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    user_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES user_posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_like (post_id, user_id),
-    INDEX idx_post (post_id)
-);
-
--- Post comments
-CREATE TABLE post_comments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    user_id INT NOT NULL,
-    comment TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES user_posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-    INDEX idx_post_created (post_id, created_at)
+    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE,
+    FOREIGN KEY (workout_id) REFERENCES workout_sessions(id) ON DELETE CASCADE
 );
 
 -- User displayed achievements (customizable showcase)
@@ -398,4 +364,3 @@ CREATE TABLE leaderboards (
 );
 
 SHOW TABLES;
-
